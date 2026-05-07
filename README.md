@@ -1,148 +1,81 @@
 # PgVault
 
-**Auditor de seguridad y cumplimiento para PostgreSQL**
+PgVault es un auditor de seguridad y cumplimiento para PostgreSQL. Se conecta en modo read-only, analiza configuración, privilegios y datos sensibles, y genera hallazgos con evidencia, recomendaciones automáticas, score y reportes.
 
-PgVault es una herramienta diseñada para conectarse a bases de datos PostgreSQL en modo read-only y analizar aspectos de seguridad, configuraciones, privilegios, funciones riesgosas y posibles datos sensibles, sin modificar la base auditada.
+## Equipo
 
-## Índice
-
-- [Descripción general](#descripción-general)
-- [Integrantes del equipo](#integrantes-del-equipo)
-- [Problema que resuelve](#problema-que-resuelve)
-- [Objetivo del proyecto](#objetivo-del-proyecto)
-- [Principios del sistema](#principios-del-sistema)
-- [Arquitectura](#arquitectura)
-- [Módulos principales](#módulos-principales)
-- [Alcance inicial del MVP](#alcance-inicial-del-mvp)
-- [Tecnologías](#tecnologías)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Instalación](#instalación)
-- [Uso básico](#uso-básico)
-- [Reportes](#reportes)
-- [Pitch](#pitch)
-
-## Descripción general
-
-PgVault busca proporcionar una vista clara del estado de seguridad de una base de datos PostgreSQL. Para ello, ejecuta consultas de lectura sobre catálogos del sistema, configuraciones, permisos y estructuras de datos, con el objetivo de identificar hallazgos relevantes y presentarlos de forma organizada.
-
-El sistema no realiza cambios sobre la base auditada. Su propósito es observar, analizar y reportar.
-
-## Integrantes del equipo
+Integrantes del equipo:
 
 - Borquez Hernandez, Daniela
 - Mc Donald Smith, Dowshel Jekeal
-- Méndez Yépez, César Alejandro
-- Rito Michelena, Mariajosé
+- Mendez Yepez, Cesar Alejandro
+- Rito Michelena, Mariajose
 - Vega Cabrera, Diego
 
-## Problema que resuelve
+Cuando el equipo defina roles, llenar esta tabla. En GitHub Projects, Issues y PRs se recomienda usar el número de integrante para mantener todo ordenado.
 
-Muchas bases de datos PostgreSQL pueden contener datos sensibles, privilegios excesivos o configuraciones inseguras sin que el equipo tenga visibilidad completa. Esto dificulta detectar riesgos, priorizar correcciones y mantener evidencia técnica de los problemas encontrados.
+| Integrante | Nombre | Rol principal |
+|---|---|---|
+| Integrante 1 |  |  |
+| Integrante 2 |  |  |
+| Integrante 3 |  |  |
+| Integrante 4 |  |  |
+| Integrante 5 |  |  |
 
-PgVault ayuda a centralizar el análisis de seguridad para que los hallazgos puedan revisarse, clasificarse y documentarse de manera más clara.
+Aunque cada quien tenga un rol principal después, todos deben entender lo básico del proyecto completo.
 
-## Objetivo del proyecto
+## Entregas
 
-- Conectarse a PostgreSQL en modo read-only.
-- Ejecutar análisis de seguridad.
-- Detectar hallazgos relevantes.
-- Clasificar hallazgos por severidad.
-- Mostrar resultados en un dashboard.
-- Generar reportes exportables.
-- Mantener evidencia técnica por hallazgo.
+- **9 de mayo:** base inicial, roles, tablero, primeras tareas y avance técnico inicial.
+- **12 de mayo:** demo parcial con integración y al menos 8 hallazgos funcionando.
+- **15 de mayo:** MVP final, Docker Compose, reportes, pitch, video demo y Q&A.
 
-## Principios del sistema
+## Documentos útiles
 
-### Read-only
+- [GitHub Projects](docs/CONTROL_GITHUB_PROJECTS.md)
+- [Reglas de Git](docs/REGLAS_GIT.md)
+- [Roles](docs/ROLES.md)
 
-PgVault no modifica la base de datos auditada. Su funcionamiento se basa en consultas de lectura.
+## Alcance del MVP
 
-### Seguridad
+- Conexión read-only a PostgreSQL.
+- Extracción de información del catálogo.
+- Checks de seguridad y configuración.
+- Detección de datos sensibles por nombre y contenido.
+- Recomendaciones automáticas por hallazgo detectado.
+- Dashboard o salida visual.
+- Reporte ejecutivo y técnico.
+- Exportación a PDF.
+- Docker Compose.
 
-El sistema debe proteger credenciales y evitar exponer datos sensibles durante el análisis y la visualización de resultados.
+## Tecnología
 
-### Evidencia
+El equipo puede elegir las herramientas que considere mejores. Se permite usar herramientas open source e IA, siempre que se entienda, se valide y se declare su uso.
 
-Cada hallazgo debe contar con soporte técnico que permita entender por qué representa un riesgo.
+Condiciones importantes:
 
-### Extensibilidad
+- El producto debe respetar read-only.
+- Debe correr con `docker compose up`.
+- No debe depender de hardcodear la base demo.
+- Cada hallazgo importante debe incluir una recomendación clara.
+- Todos deben poder explicar lo que se entrega.
 
-Las reglas de análisis deben poder crecer sin depender de nombres específicos hardcodeados.
+## Flujo de trabajo
 
-## Arquitectura
+1. Crear o tomar una Issue del GitHub Project.
+2. Crear rama propia.
+3. Hacer commits claros.
+4. Abrir Pull Request.
+5. Pedir revisión cruzada.
+6. Hacer merge solo cuando el PR esté aprobado.
 
-Por definir.
+Estados del Project:
 
-La arquitectura inicial deberá contemplar, como mínimo, los siguientes componentes:
+- Todo
+- In Progress
+- In Review
+- Done
 
-- Conector read-only hacia PostgreSQL.
-- Motor de análisis de reglas.
-- Almacenamiento temporal o persistente de resultados.
-- API para consultar hallazgos.
-- Dashboard web.
-- Generador de reportes exportables.
+## Uso de IA
 
-## Módulos principales
-
-### Módulo 1: Auditoría de configuración y seguridad
-
-Analiza roles, privilegios, autenticación, logging, extensiones y funciones `SECURITY DEFINER`.
-
-### Módulo 2: Descubrimiento de datos sensibles
-
-Detecta datos sensibles por nombre de columna y por contenido. Algunos patrones iniciales son: `curp`, `rfc`, `email`, `telefono`, `tarjeta`, `cvv` y `password`.
-
-### Módulo 3: Reportes y visualización
-
-Presenta hallazgos en un dashboard, clasifica resultados por severidad, muestra evidencia, incluye recomendaciones y permite exportar reportes.
-
-## Alcance inicial del MVP
-
-- Conexión a PostgreSQL.
-- Lectura de catálogos del sistema.
-- Detección de configuraciones inseguras.
-- Detección de privilegios excesivos.
-- Detección de datos sensibles.
-- Dashboard web.
-- Exportación de reportes.
-
-## Tecnologías
-
-- Backend: FastAPI o Node/Express.
-- Base de datos objetivo: PostgreSQL.
-- Frontend: React/Vite u otra alternativa simple.
-- Reportes: PDF.
-- Despliegue: Docker Compose.
-
-## Estructura del proyecto
-
-Por definir.
-
-La estructura final del repositorio se documentará cuando se definan los módulos técnicos principales.
-
-## Instalación
-
-```bash
-git clone <URL_DEL_REPOSITORIO>
-cd pgvault
-cp .env.example .env
-docker compose up --build
-```
-
-## Uso básico
-
-1. Configurar conexión a PostgreSQL.
-2. Levantar el proyecto.
-3. Ejecutar análisis.
-4. Revisar hallazgos en dashboard.
-5. Exportar reportes.
-
-## Reportes
-
-Por definir.
-
-Los reportes deberán incluir hallazgos clasificados por severidad, evidencia técnica y recomendaciones generales para su revisión.
-
-## Pitch
-
-Link del pitch: <AGREGAR_LINK_AQUI>
+Se puede usar IA para apoyo, investigación, documentación, revisión o ideas técnicas. Cualquier uso relevante debe declararse en el Pull Request.
