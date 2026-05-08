@@ -14,9 +14,9 @@ Integrantes del equipo:
 
 Cuando el equipo defina roles, llenar esta tabla. En GitHub Projects, Issues y PRs se recomienda usar el número de integrante para mantener todo ordenado.
 
-| Integrante | Nombre | Rol principal |
+| Integrante | Rol principal | Nombre |
 |---|---|---|
-| Integrante 1 | Diego Vega | Conector y orquestador |
+| Integrante 1 | Conector y orquestador | Diego Vega |
 | Integrante 2 | Auditor de configuración | Dowshell smith  |
 | Integrante 3 |Descubridor de datos sensibles  | Daniela Bórquez |
 | Integrante 4 | Reportes y mapeo regulatorio | Mariajose Rito |
