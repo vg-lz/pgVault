@@ -16,11 +16,11 @@ Cuando el equipo defina roles, llenar esta tabla. En GitHub Projects, Issues y P
 
 | Integrante | Nombre | Rol principal |
 |---|---|---|
-| Integrante 1 |  |  |
-| Integrante 2 |  |  |
-| Integrante 3 |  |  |
-| Integrante 4 |  |  |
-| Integrante 5 |  |  |
+| Integrante 1 | Diego Vega | Conector y orquestador |
+| Integrante 2 | Auditor de configuración | Dowshell smith  |
+| Integrante 3 |Descubridor de datos sensibles  | Daniela Bórquez |
+| Integrante 4 | Reportes y mapeo regulatorio | Mariajose Rito |
+| Integrante 5 | Producto, negocio y coordinación | Cesar Mendez |
 
 Aunque cada quien tenga un rol principal después, todos deben entender lo básico del proyecto completo.
 
