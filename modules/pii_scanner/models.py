@@ -55,3 +55,5 @@ class ScanResult(BaseModel):
     findings: list[Finding]
     scan_duration_seconds: float
     errors: list[str] = []
+
+    from .content_validators import validate_content, match_ratio, VALIDATORS

@@ -170,4 +170,4 @@ def scan_by_name(columns: list[ColumnMeta]) -> list[NameMatch]:
                     matched_pattern=pattern.pattern.pattern,
                 ))
                 break
-    return matches
+    return matches. 
