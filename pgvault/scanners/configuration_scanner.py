@@ -32,6 +32,12 @@ class ConfigurationScanner:
         # Regla 4: Detectar reglas pg_hba.conf inseguras (trust desde red)
         findings.extend(self._check_hba_trust_rules(context))
 
+        # Regla 5: Detectar credenciales débiles por nombre de rol
+        findings.extend(self._check_weak_credentials(context))
+
+        # Regla 6: Detectar extensiones peligrosas instaladas
+        findings.extend(self._check_dangerous_extensions(context))
+
         return findings
 
     def _check_superuser_roles(self, context: ScanContext) -> list[Finding]:
@@ -275,6 +281,129 @@ class ConfigurationScanner:
                             framework="OWASP",
                             article="A07:2021",
                             description="Identification and Authentication Failures.",
+                        ),
+                    ],
+                )
+            )
+
+        return findings
+
+    def _check_weak_credentials(self, context: ScanContext) -> list[Finding]:
+        """Detecta roles con nombres que sugieren credenciales débiles o por defecto."""
+
+        findings: list[Finding] = []
+
+        # Lista de nombres de roles sospechosos comúnmente asociados con passwords débiles
+        suspicious_role_names = {
+            "admin", "administrator", "superadmin", "root", "sa",
+            "test", "demo", "guest", "user", "default"
+        }
+
+        suspicious_roles = [
+            role for role in context.snapshot.roles
+            if role.role_name.lower() in suspicious_role_names and role.can_login
+        ]
+
+        for role in suspicious_roles:
+            findings.append(
+                Finding(
+                    id=f"CFG-006-{role.role_name}",
+                    module=self.name,
+                    category="credentials",
+                    title=f"Rol '{role.role_name}' tiene nombre sospechoso asociado con credenciales débiles",
+                    description=(
+                        f"El rol '{role.role_name}' utiliza un nombre común que frecuentemente se asocia "
+                        "con contraseñas débiles o por defecto (admin/admin, admin/admin123, etc.). "
+                        "Estos roles son objetivos principales de ataques de fuerza bruta y diccionario."
+                    ),
+                    severity=Severity.HIGH,
+                    evidence=f"SELECT rolname, rolcanlogin FROM pg_roles WHERE rolname = '{role.role_name}';",
+                    recommendation=(
+                        "Implementar política de contraseñas robustas: mínimo 12 caracteres, combinación de "
+                        "mayúsculas, minúsculas, números y símbolos. Considerar renombrar el rol a un nombre "
+                        "menos obvio y forzar reset de contraseña inmediato. Activar autenticación de dos factores "
+                        "si está disponible."
+                    ),
+                    remediation_sql=(
+                        f"-- Forzar cambio de contraseña para '{role.role_name}':\n"
+                        f"ALTER ROLE {role.role_name} PASSWORD 'nueva_contraseña_robusta';\n"
+                        "-- Considerar renombrar el rol:\n"
+                        f"ALTER ROLE {role.role_name} RENAME TO {role.role_name}_produccion;"
+                    ),
+                    regulation_refs=[
+                        RegulationRef(
+                            framework="PCI-DSS",
+                            article="Req. 8.2.3",
+                            description="Las contraseñas deben cumplir requisitos mínimos de complejidad.",
+                        ),
+                        RegulationRef(
+                            framework="OWASP",
+                            article="A07:2021",
+                            description="Identification and Authentication Failures - Credenciales débiles.",
+                        ),
+                    ],
+                )
+            )
+
+        return findings
+
+    def _check_dangerous_extensions(self, context: ScanContext) -> list[Finding]:
+        """Detecta extensiones de PostgreSQL que aumentan la superficie de ataque."""
+
+        findings: list[Finding] = []
+
+        # Extensiones consideradas peligrosas si no se usan con cuidado
+        dangerous_extensions = {
+            "dblink": (
+                "dblink permite conexiones a otras bases de datos y puede ser usada para "
+                "escalación de privilegios, exfiltración de datos o ataques de pivoteo."
+            ),
+            "pg_read_server_files": (
+                "pg_read_server_files permite leer archivos del servidor, lo que puede exponer "
+                "configuraciones sensibles, logs o datos del sistema operativo."
+            ),
+            "file_fdw": (
+                "file_fdw permite acceso directo al sistema de archivos del servidor y puede "
+                "ser usado para leer o escribir archivos sensibles."
+            ),
+        }
+
+        installed_dangerous = [
+            ext for ext in context.snapshot.extensions
+            if ext.name in dangerous_extensions
+        ]
+
+        for ext in installed_dangerous:
+            findings.append(
+                Finding(
+                    id=f"CFG-007-ext-{ext.name}",
+                    module=self.name,
+                    category="extensions",
+                    title=f"Extensión '{ext.name}' instalada representa riesgo de seguridad",
+                    description=(
+                        f"La extensión '{ext.name}' está instalada en el servidor. "
+                        f"{dangerous_extensions[ext.name]} "
+                        "Si esta extensión no se utiliza activamente, debe eliminarse para reducir "
+                        "la superficie de ataque."
+                    ),
+                    severity=Severity.MEDIUM,
+                    evidence=f"SELECT extname, extversion FROM pg_extension WHERE extname = '{ext.name}';",
+                    recommendation=(
+                        f"Verificar si la extensión '{ext.name}' es realmente necesaria. Si no se usa, "
+                        "eliminarla inmediatamente. Si se requiere, documentar su uso y restringir acceso "
+                        "solo a roles administrativos de confianza."
+                    ),
+                    remediation_sql=(
+                        f"-- Si no se necesita, eliminar la extensión:\n"
+                        f"DROP EXTENSION IF EXISTS {ext.name};\n"
+                        "-- Si se necesita, restringir privilegios:\n"
+                        f"REVOKE ALL ON EXTENSION {ext.name} FROM PUBLIC;"
+                    ),
+                    regulation_refs=[
+                        RegulationRef(
+                            framework="CIS PostgreSQL Benchmark",
+                            article="2.3",
+                            description="Minimizar extensiones instaladas para reducir superficie de ataque.",
                         ),
                     ],
                 )

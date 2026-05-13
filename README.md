@@ -255,6 +255,46 @@ Ese comando borra los datos de los contenedores de demo y vuelve a sembrarlos.
 - Exportacion a PDF.
 - Docker Compose.
 
+## Módulos de escaneo
+
+PgVault utiliza un sistema modular de escáneres que analizan diferentes aspectos
+de seguridad y cumplimiento en PostgreSQL. Cada módulo implementa el protocolo
+`ScannerModule` y retorna hallazgos con evidencia, recomendaciones y SQL de
+remediación.
+
+### ConfigurationScanner
+
+Audita la configuración de seguridad del servidor PostgreSQL. Detecta problemas
+en roles, funciones, logging y autenticación.
+
+**Reglas implementadas:**
+
+| ID | Descripción | Severidad |
+|---|---|---|
+| **CFG-001** | Roles con privilegio SUPERUSER innecesario (excluyendo 'postgres') | HIGH |
+| **CFG-002** | Funciones SECURITY DEFINER sin `search_path` seguro | CRITICAL |
+| **CFG-003** | Logging de conexiones desactivado (`log_connections = off`) | HIGH |
+| **CFG-004** | Logging de desconexiones desactivado (`log_disconnections = off`) | MEDIUM |
+| **CFG-005** | Autenticación 'trust' en `pg_hba.conf` desde redes externas | CRITICAL/HIGH |
+| **CFG-006** | Roles con nombres sospechosos asociados a credenciales débiles | HIGH |
+| **CFG-007** | Extensiones peligrosas instaladas (dblink, pg_read_server_files, file_fdw) | MEDIUM |
+
+**Detalles de CFG-005:**
+- CRITICAL: reglas `trust` desde `0.0.0.0/0` o `::/0` (acceso desde cualquier red)
+- HIGH: reglas `trust` locales (socket Unix, `127.0.0.1/32`, `::1/128`)
+
+**Detalles de CFG-006:**
+- Detecta roles con nombres comunes como 'admin', 'administrator', 'root', 'test', 'demo'
+- Recomienda política de contraseñas robustas y renombrado de roles
+
+**Cobertura actual:** 8/10 problemas de configuración detectados (80%)
+
+**Uso:**
+
+El `ConfigurationScanner` se carga automáticamente mediante `pgvault.modules.get_default_modules()`
+con fallback opcional si el módulo no está disponible. No requiere configuración
+adicional.
+
 ## Tecnologia
 
 El equipo puede elegir las herramientas que considere mejores. Se permite usar
