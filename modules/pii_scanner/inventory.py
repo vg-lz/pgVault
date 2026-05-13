@@ -1,5 +1,6 @@
 import asyncpg
-from .models import ColumnMeta
+
+from pgvault.models import ColumnMeta
 
 EXCLUDED_SCHEMAS = frozenset({
     "pg_catalog",
