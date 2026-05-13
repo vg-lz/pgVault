@@ -104,6 +104,17 @@ def test_web_demo_profiles_match_demo_database_credentials():
         assert 'sslmode: "disable"' in app_js
 
 
+def test_web_presentation_links_to_connection_app():
+    landing = read_text("pgvault/static/index.html")
+    app_page = read_text("pgvault/static/app.html")
+    web_py = read_text("pgvault/web.py")
+
+    assert 'href="/app"' in landing
+    assert 'id="sales-form"' in landing
+    assert 'id="connection-form"' in app_page
+    assert 'STATIC_DIR / "app.html"' in web_py
+
+
 def test_readme_links_to_demo_usage_guide():
     readme = read_text("README.md")
     assert "docs/USO_DEMOS.md" in readme

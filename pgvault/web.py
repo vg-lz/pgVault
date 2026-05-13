@@ -112,6 +112,10 @@ def create_app(
     async def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
 
+    @app.get("/app")
+    async def web_app() -> FileResponse:
+        return FileResponse(STATIC_DIR / "app.html")
+
     @app.get("/api/health")
     async def health() -> dict[str, str]:
         return {"status": "ok", "project": "pgvault"}

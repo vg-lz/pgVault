@@ -418,6 +418,16 @@ def generate_technical_report(findings: list[dict], output_path: str = None) -> 
         elems.append(header_t)
         elems.append(Spacer(1, 0.15 * cm))
 
+        # Objeto afectado
+        table_name = f.get("table_name")
+        column_name = f.get("column_name")
+        if table_name:
+            location = f"{table_name}.{column_name}" if column_name else table_name
+            elems.append(Paragraph(
+                f"<b>Objeto afectado:</b> <font name='Courier'>{location}</font>",
+                styles["body_muted"]
+            ))
+
         # Descripción
         elems.append(Paragraph(f["description"], styles["body"]))
 
@@ -427,6 +437,12 @@ def generate_technical_report(findings: list[dict], output_path: str = None) -> 
                                    styles["body_muted"]))
             elems.append(Paragraph(f["evidence"], styles["code"]))
 
+        # Recomendación
+        recommendation = f.get("recommendation", "")
+        if recommendation:
+            elems.append(Paragraph("<b>Recomendación:</b>", styles["body_muted"]))
+            elems.append(Paragraph(recommendation, styles["body"]))
+
         # Remediación SQL
         if f.get("remediation_sql"):
             elems.append(Paragraph("<b>SQL de remediación:</b>",
@@ -434,6 +450,14 @@ def generate_technical_report(findings: list[dict], output_path: str = None) -> 
             elems.append(Paragraph(
                 f["remediation_sql"].replace("\n", "<br/>"),
                 styles["code"]
+            ))
+
+        # Confianza de detección
+        confidence = f.get("confidence_score")
+        if confidence is not None:
+            elems.append(Paragraph(
+                f"<b>Confianza de detección:</b> {int(confidence * 100)}%",
+                styles["body_muted"]
             ))
 
         # Mapeo regulatorio
