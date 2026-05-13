@@ -167,3 +167,47 @@ Se realizaron entrevistas semiestructuradas de ~20 minutos con perfiles de segur
 | **Immuta** | Enterprise | Desde $5,000 USD/usuario/mes — cotización | Data governance y access control | No | No | Parcial | No |
 | **BigID** | Enterprise | $15,000–$175,000 USD anuales — cotización | Data discovery y clasificación | No | No | No | No |
 | **PgVault** | SMB LATAM | Por definir (objetivo: $50–150 USD/mes) | Seguridad + cumplimiento regulación MX | **Sí** | **Sí** | **Sí** | **Sí** |
+
+---
+
+## 7. Modelo de negocio (propuesta)
+
+---
+
+## 8. Mapeo regulatorio
+
+### LFPDPPP (Ley Federal de Protección de Datos Personales en Posesión de Particulares)
+
+| Artículo | Obligación | Cómo PgVault ayuda |
+|---|---|---|
+| Art. 19 | Implementar medidas de seguridad técnicas | Identifica configuraciones inseguras y privilegios excesivos |
+| Art. 20 | Establecer y mantener medidas de seguridad | Genera evidencia auditable del estado de seguridad |
+| Art. 25 | Proteger datos contra tratamiento no autorizado | Detecta columnas con datos sensibles sin protección adecuada |
+
+### PCI-DSS v4.0
+
+| Requerimiento | Descripción | Cómo PgVault ayuda |
+|---|---|---|
+| Req. 3 | Proteger datos de tarjetahabientes almacenados | Detecta patrones de tarjetas en columnas y contenido |
+| Req. 7 | Restringir acceso a componentes del sistema | Audita roles y privilegios excesivos |
+| Req. 8 | Identificar y autenticar acceso | Revisa usuarios con SUPERUSER y permisos innecesarios |
+
+### CNBV (Circular Única de Bancos / Disposiciones para Instituciones de Tecnología Financiera)
+
+| Disposición | Obligación | Cómo PgVault ayuda |
+|---|---|---|
+| Art. 71 LRITF | Medidas de seguridad de la información | Reporte ejecutivo con hallazgos priorizados |
+| Anexo G | Controles de acceso lógico | Auditoría de privilegios y roles en PostgreSQL |
+
+---
+
+## 9. Riesgos y mitigaciones
+
+| Riesgo | Probabilidad | Mitigación |
+|---|---|---|
+| El cliente no usa PostgreSQL | Media | Roadmap a MySQL/MariaDB en v2 |
+| Desconfianza por acceso a la BD | Alta | Modo read-only verificable + código abierto |
+| Competidor grande entra al segmento SMB | Baja | Ventaja de especialización en regulación MX |
+| Falsos positivos en detección de datos sensibles | Media | Score de confianza + revisión humana recomendada |
+
+---
