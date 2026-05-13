@@ -10,6 +10,7 @@ THRESHOLD_HIGH = 0.60
 THRESHOLD_MEDIUM = 0.40
 THRESHOLD_SKIP = 0.40
 MIN_RELIABLE_SAMPLE = 50
+THRESHOLD_EPSILON = 0.005
 
 
 @dataclass
@@ -70,7 +71,7 @@ def calculate_score(inp: ScoreInput) -> ScoreOutput:
     )
     final_score = round(min(1.0, max(0.0, final_score)), 4)
 
-    if final_score >= THRESHOLD_CRITICAL:
+    if final_score >= THRESHOLD_CRITICAL - THRESHOLD_EPSILON:
         severity = Severity.CRITICAL
     elif final_score >= THRESHOLD_HIGH:
         severity = Severity.HIGH

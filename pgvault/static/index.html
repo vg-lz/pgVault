@@ -3,99 +3,248 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>pgvault</title>
+    <title>pgvault | plataforma de auditoria PostgreSQL</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
-  <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">postgresql security auditor</p>
-        <h1>pgvault</h1>
-      </div>
-      <div class="status-pill" id="app-status">sin validar</div>
+  <body class="marketing-page">
+    <header class="site-topbar">
+      <a class="brand-lockup" href="#inicio" aria-label="PgVault inicio">
+        <span class="brand-mark">pg</span>
+        <span>
+          <strong>pgvault</strong>
+          <small>PostgreSQL Security Auditor</small>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Navegacion principal">
+        <a href="#capacidades">Capacidades</a>
+        <a href="#operacion">Operacion</a>
+        <a href="#regulacion">Regulacion</a>
+        <a href="#costos">Costos</a>
+        <a class="nav-cta" href="/app">Ingresar</a>
+      </nav>
     </header>
 
-    <main>
-      <section class="connection-screen" id="connection-screen">
-        <aside class="profile-sidebar">
-          <div class="profile-sidebar-head">
-            <div>
-              <p class="eyebrow">perfiles</p>
-              <h2>Conexiones</h2>
-            </div>
-            <button type="button" id="new-profile-btn" class="icon-btn" title="Nuevo perfil">+</button>
+    <main class="presentation-shell">
+      <section class="hero-pro reveal-on-scroll" id="inicio">
+        <div class="hero-copy-pro">
+          <div class="live-chip" id="health-chip">
+            <span class="pulse-dot"></span>
+            <span>verificando servicio</span>
           </div>
-          <div id="profile-list" class="profile-list"></div>
-        </aside>
-
-        <form id="connection-form" class="connection-form">
-          <div class="form-head">
-            <div>
-              <h2>Conexión PostgreSQL</h2>
-              <p>Configura una conexión read-only para validar y ejecutar la revisión.</p>
-            </div>
-          </div>
-
-          <div class="grid">
-            <label>Alias<input name="alias" autocomplete="off" required value="fintechdb-demo" /></label>
-            <label>Host<input name="host" required value="fintechdb" /></label>
-            <label>Puerto<input name="port" type="number" min="1" max="65535" required value="5432" /></label>
-            <label>Base de datos<input name="database" required value="fintechdb" /></label>
-            <label>Usuario<input name="user" required value="fintech_user" /></label>
-            <label>Contraseña<input name="password" type="password" autocomplete="current-password" /></label>
-            <label>
-              sslmode
-              <select name="sslmode">
-                <option>disable</option>
-                <option>allow</option>
-                <option selected>prefer</option>
-                <option>require</option>
-                <option>verify-ca</option>
-                <option>verify-full</option>
-              </select>
-            </label>
-            <label>Sample limit<input name="sample_limit" type="number" min="0" max="10000" value="100" /></label>
-            <label>Query timeout<input name="query_timeout" type="number" min="0.1" max="120" step="0.1" value="10" /></label>
-          </div>
-
-          <p class="secret-note">
-            La contraseña se usa solo para conectar en esta sesión. Los perfiles se guardan solo en este navegador y sin contraseña.
+          <p class="eyebrow">Plataforma operativa de auditoria PostgreSQL</p>
+          <h1>
+            Auditoria PostgreSQL con
+            <span id="rotating-term">evidencia tecnica</span>
+          </h1>
+          <p class="hero-lede">
+            PgVault convierte revisiones PostgreSQL en un flujo ejecutivo: conexiones controladas,
+            hallazgos priorizados, evidencia sanitizada, trazabilidad regulatoria y salida accionable
+            para equipos de tecnologia, riesgo y cumplimiento.
           </p>
-
-          <div id="message" class="message" role="status"></div>
-          <div class="actions">
-            <button type="button" id="save-btn" class="secondary">Guardar / actualizar</button>
-            <button type="button" id="validate-btn">Validar conexión</button>
-            <button type="button" id="scan-btn" class="primary" disabled>Realizar revisión</button>
+          <div class="hero-actions-pro">
+            <a class="button primary" href="/app">Entrar al panel operativo</a>
+            <a class="button secondary" href="#operacion">Ver operacion</a>
           </div>
-        </form>
+          <div class="trust-row" aria-label="Indicadores de producto">
+            <span>read-only</span>
+            <span>sin guardar contrasenas</span>
+            <span>evidencia sanitizada</span>
+          </div>
+        </div>
+
+        <div class="hero-visual-wrap">
+          <div class="product-frame">
+            <img class="hero-product-image" src="/static/assets/pgvault-hero.png" alt="Dashboard profesional de auditoria de seguridad PostgreSQL" />
+            <div class="product-frame-bar">
+              <span></span><span></span><span></span>
+              <strong>pgvault audit cockpit</strong>
+            </div>
+          </div>
+          <div class="floating-status status-a">
+            <span class="status-label danger">Riesgo alto</span>
+            <strong>PII detectada</strong>
+            <small>evidencia sanitizada, sin valores crudos</small>
+          </div>
+          <div class="floating-status status-b">
+            <span class="status-label success">Conexion validada</span>
+            <strong>Read-only confirmado</strong>
+            <small>lista para ejecutar revision</small>
+          </div>
+          <aside class="hero-score-card">
+            <p>Postura actual</p>
+            <strong>82</strong>
+            <span>control score</span>
+          </aside>
+        </div>
       </section>
 
-      <section class="results-screen hidden" id="results-screen">
-        <aside class="findings-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">resultado</p>
-              <h2 id="result-title">Hallazgos</h2>
-            </div>
-            <button type="button" id="new-scan-btn" class="ghost">Nueva conexión</button>
-          </div>
-          <div class="summary" id="summary"></div>
-          <div class="history-block">
-            <h3>Historial</h3>
-            <div id="history-list" class="history-list"></div>
-          </div>
-          <div id="finding-list" class="finding-list"></div>
-        </aside>
+      <section class="metric-strip assurance-strip reveal-on-scroll" aria-label="Garantias operativas del producto">
+        <article>
+          <strong class="assurance-kicker">Operación privada</strong>
+          <span class="metric-value">100%</span>
+          <p>funcionamiento local</p>
+          <small>La revision se ejecuta dentro del entorno autorizado del cliente.</small>
+        </article>
+        <article>
+          <strong class="assurance-kicker">Auditoria segura</strong>
+          <span class="metric-value">0</span>
+          <p>cambios realizados</p>
+          <small>Modo read-only: sin alterar tablas, registros, indices ni configuracion.</small>
+        </article>
+        <article>
+          <strong class="assurance-kicker">Acceso controlado</strong>
+          <span class="metric-value">SSH</span>
+          <p>conexion segura</p>
+          <small>Compatible con accesos controlados, tuneles y credenciales de sesion.</small>
+        </article>
+        <article>
+          <strong class="assurance-kicker">Salida accionable</strong>
+          <span class="metric-value">SQL</span>
+          <p>remediacion guiada</p>
+          <small>Hallazgos priorizados con evidencia, impacto y acciones sugeridas.</small>
+        </article>
+      </section>
 
-        <section class="detail-panel" id="detail-panel">
-          <p class="eyebrow">detalle técnico</p>
-          <h2>Selecciona un hallazgo</h2>
-          <p class="muted">Las recomendaciones, SQL sugerido y referencias aparecerán aquí.</p>
-        </section>
+      <section class="presentation-section platform-band reveal-on-scroll" id="capacidades">
+        <div class="section-kicker">
+          <p class="eyebrow">Capacidades</p>
+          <h2>Un sistema de auditoria preparado para operar, presentar y remediar.</h2>
+          <p>PgVault permite que los clientes conecten sus propias bases PostgreSQL, ejecuten auditorias controladas y revisen resultados accionables desde una sola experiencia.</p>
+        </div>
+        <div class="capability-grid">
+          <article class="capability-card reveal-on-scroll">
+            <span class="card-index">01</span>
+            <h3>Conexion gobernada</h3>
+            <p>Perfiles locales, credenciales de sesion y validacion antes de ejecutar cualquier revision.</p>
+          </article>
+          <article class="capability-card accent-cyan reveal-on-scroll">
+            <span class="card-index">02</span>
+            <h3>Hallazgos accionables</h3>
+            <p>Severidad, categoria, evidencia, explicacion tecnica, recomendacion y SQL sugerido.</p>
+          </article>
+          <article class="capability-card accent-amber reveal-on-scroll">
+            <span class="card-index">03</span>
+            <h3>Mapa regulatorio</h3>
+            <p>Referencias para apoyar revisiones de privacidad, acceso, trazabilidad y configuracion segura.</p>
+          </article>
+          <article class="capability-card accent-red reveal-on-scroll">
+            <span class="card-index">04</span>
+            <h3>Remediacion guiada</h3>
+            <p>Recomendaciones claras para priorizar acciones, asignar responsables y reducir exposicion.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="presentation-section ops-section reveal-on-scroll" id="operacion">
+        <div class="section-kicker">
+          <p class="eyebrow">Operacion</p>
+          <h2>Del acceso al reporte sin pasos ambiguos.</h2>
+        </div>
+        <div class="ops-timeline">
+          <article>
+            <span>1</span>
+            <h3>Registra tu conexion</h3>
+            <p>El cliente ingresa los parametros de su base PostgreSQL y define limites de revision.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <h3>Valida conexion</h3>
+            <p>La aplicacion confirma conectividad y evita ejecutar revision sobre parametros no verificados.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <h3>Ejecuta revision</h3>
+            <p>Los modulos consultan catalogos, permisos, configuracion y muestras acotadas.</p>
+          </article>
+          <article>
+            <span>4</span>
+            <h3>Presenta resultados</h3>
+            <p>El panel prioriza hallazgos y conserva historial local del navegador durante la sesion.</p>
+          </article>
+        </div>
+        <div class="command-panel">
+          <div class="terminal-line">estado de plataforma</div>
+          <pre id="health-output">{ "status": "checking" }</pre>
+        </div>
+      </section>
+
+      <section class="presentation-section regulation-layout reveal-on-scroll" id="regulacion">
+        <div class="section-kicker">
+          <p class="eyebrow">Regulacion y reglas</p>
+          <h2>Controles explicables para equipos tecnicos y de negocio.</h2>
+          <p>El producto organiza las reglas en lenguaje operativo para que el hallazgo pueda discutirse, priorizarse y remediarse.</p>
+        </div>
+        <div class="accordion-list" id="rules-accordion">
+          <button class="rule-item active" type="button">
+            <span>Privacidad y datos personales</span>
+            <small>PII, minimizacion, exposicion y evidencia sanitizada.</small>
+          </button>
+          <button class="rule-item" type="button">
+            <span>Menor privilegio</span>
+            <small>Roles, permisos amplios y accesos innecesarios.</small>
+          </button>
+          <button class="rule-item" type="button">
+            <span>Autenticacion y red</span>
+            <small>Senales de configuracion debil y superficie de conexion.</small>
+          </button>
+          <button class="rule-item" type="button">
+            <span>Trazabilidad de remediacion</span>
+            <small>Descripcion, evidencia, recomendacion y SQL sugerido.</small>
+          </button>
+        </div>
+      </section>
+
+      <section class="presentation-section pricing-pro reveal-on-scroll" id="costos">
+        <div class="section-kicker">
+          <p class="eyebrow">Costos</p>
+          <h2>Precio segun alcance, regulacion y acompanamiento.</h2>
+          <p>El costo depende del numero de bases, alcance regulatorio, frecuencia de auditoria y acompanamiento requerido.</p>
+        </div>
+        <div class="sales-layout">
+          <form class="sales-form pro-form" id="sales-form">
+            <div class="grid">
+              <label>Nombre<input name="name" autocomplete="name" required /></label>
+              <label>Correo<input name="email" type="email" autocomplete="email" required /></label>
+              <label>Empresa<input name="company" autocomplete="organization" required /></label>
+              <label>Rol<input name="role" autocomplete="organization-title" /></label>
+              <label>
+                Bases a revisar
+                <select name="database_count">
+                  <option>1-3</option>
+                  <option>4-10</option>
+                  <option>11-50</option>
+                  <option>Mas de 50</option>
+                </select>
+              </label>
+              <label>
+                Prioridad
+                <select name="priority">
+                  <option>Evaluacion inicial</option>
+                  <option>Auditoria proxima</option>
+                  <option>Produccion en riesgo</option>
+                </select>
+              </label>
+            </div>
+            <label class="full-label">Mensaje<textarea name="message" rows="4" placeholder="Cuentanos que bases, regulaciones o fechas necesitan cubrir."></textarea></label>
+            <div class="message" id="sales-message" role="status"></div>
+            <div class="actions">
+              <button type="submit" class="primary">Solicitar contacto</button>
+            </div>
+          </form>
+          <aside class="lead-preview">
+            <p class="eyebrow">Resumen comercial</p>
+            <h3 id="lead-title">Nuevo contacto</h3>
+            <dl>
+              <div><dt>Alcance</dt><dd id="lead-scope">1-3 bases</dd></div>
+              <div><dt>Prioridad</dt><dd id="lead-priority">Evaluacion inicial</dd></div>
+              <div><dt>Estado</dt><dd id="lead-state">pendiente</dd></div>
+            </dl>
+            <a class="button primary" href="/app">Probar ahora</a>
+          </aside>
+        </div>
       </section>
     </main>
 
-    <script src="/static/app.js" defer></script>
+    <script src="/static/site.js" defer></script>
   </body>
 </html>

@@ -34,6 +34,7 @@ BLOCKED_QUERY_PREFIXES = {
     "REVOKE",
     "TRUNCATE",
     "UPDATE",
+    "MERGE",
 }
 
 
@@ -54,11 +55,32 @@ def _strip_leading_comments(sql: str) -> str:
 
 
 def _has_multiple_statements(sql: str) -> bool:
-    stripped = sql.strip()
-    if ";" not in stripped:
-        return False
-    first, _, rest = stripped.partition(";")
-    return bool(first.strip() and rest.strip())
+    in_single_quote = False
+    in_double_quote = False
+    i = 0
+    while i < len(sql):
+        char = sql[i]
+        next_char = sql[i + 1] if i + 1 < len(sql) else ""
+        if in_single_quote:
+            if char == "'" and next_char == "'":
+                i += 2
+                continue
+            if char == "'":
+                in_single_quote = False
+        elif in_double_quote:
+            if char == '"' and next_char == '"':
+                i += 2
+                continue
+            if char == '"':
+                in_double_quote = False
+        elif char == "'":
+            in_single_quote = True
+        elif char == '"':
+            in_double_quote = True
+        elif char == ";":
+            return bool(sql[i + 1 :].strip())
+        i += 1
+    return False
 
 
 def assert_readonly_query(sql: str) -> None:
@@ -80,12 +102,34 @@ def assert_readonly_query(sql: str) -> None:
         )
     if prefix == "EXPLAIN" and re.search(r"\bANALYZE\b", candidate, re.IGNORECASE):
         raise UnsafeQueryError("EXPLAIN ANALYZE is not allowed because it executes the query.")
+    if prefix == "EXPLAIN" and re.search(
+        r"\b(INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE)\b",
+        candidate,
+        re.IGNORECASE,
+    ):
+        raise UnsafeQueryError("EXPLAIN is only allowed for read-only queries.")
     if prefix == "WITH" and re.search(
         r"\b(INSERT|UPDATE|DELETE|MERGE)\b",
         candidate,
         re.IGNORECASE,
     ):
         raise UnsafeQueryError("Data-changing common table expressions are not allowed.")
+
+
+def quote_identifier(name: str) -> str:
+    """Safely quote one PostgreSQL identifier component."""
+
+    if not isinstance(name, str) or not name:
+        raise ValueError("PostgreSQL identifier must be a non-empty string.")
+    if "\x00" in name:
+        raise ValueError("PostgreSQL identifier cannot contain NUL bytes.")
+    return '"' + name.replace('"', '""') + '"'
+
+
+def qualified_name(schema: str, table: str) -> str:
+    """Safely quote a schema-qualified PostgreSQL relation name."""
+
+    return f"{quote_identifier(schema)}.{quote_identifier(table)}"
 
 
 class DatabaseClient:

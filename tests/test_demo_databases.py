@@ -104,11 +104,27 @@ def test_web_demo_profiles_match_demo_database_credentials():
         assert 'sslmode: "disable"' in app_js
 
 
-def test_readme_has_web_connection_table_for_all_demo_databases():
+def test_web_presentation_links_to_connection_app():
+    landing = read_text("pgvault/static/index.html")
+    app_page = read_text("pgvault/static/app.html")
+    web_py = read_text("pgvault/web.py")
+
+    assert 'href="/app"' in landing
+    assert 'id="sales-form"' in landing
+    assert 'id="connection-form"' in app_page
+    assert 'STATIC_DIR / "app.html"' in web_py
+
+
+def test_readme_links_to_demo_usage_guide():
     readme = read_text("README.md")
+    assert "docs/USO_DEMOS.md" in readme
+
+
+def test_demo_usage_guide_has_web_connection_table_for_all_demo_databases():
+    usage_guide = read_text("docs/USO_DEMOS.md")
     for spec in DEMO_DATABASES.values():
-        assert spec["alias"] in readme
-        assert f"`{spec['host']}`" in readme
-        assert f"`{spec['database']}`" in readme
-        assert f"`{spec['user']}`" in readme
-        assert f"`{spec['password']}`" in readme
+        assert spec["alias"] in usage_guide
+        assert f"`{spec['host']}`" in usage_guide
+        assert f"`{spec['database']}`" in usage_guide
+        assert f"`{spec['user']}`" in usage_guide
+        assert f"`{spec['password']}`" in usage_guide

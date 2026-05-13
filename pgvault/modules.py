@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -13,7 +12,14 @@ from pgvault.models import CatalogSnapshot, Finding, ScanWarning
 
 @dataclass
 class ScanContext:
-    """Shared runtime data passed to every scanner module."""
+    """Shared runtime data passed to every scanner module.
+
+    Modules should read catalog metadata from ``context.snapshot`` first and
+    only run extra SQL through ``context.db`` when metadata is not enough. Any
+    SQL must pass PgVault's read-only guard. Modules return ``list[Finding]``
+    using ``pgvault.models.Finding`` and append non-fatal limitations to
+    ``context.warnings`` when a check cannot run completely.
+    """
 
     config: PgVaultConfig
     db: DatabaseClient
@@ -23,7 +29,7 @@ class ScanContext:
 
 
 class ScannerModule(Protocol):
-    """Protocol implemented by every scanner that emits findings."""
+    """Protocol implemented by every scanner that emits canonical findings."""
 
     name: str
 
@@ -31,31 +37,13 @@ class ScannerModule(Protocol):
         ...
 
 
-class CatalogBaselineScanner:
-    """Baseline scanner registered by default until domain modules are added."""
-
-    name = "catalog_baseline"
-
-    async def run(self, context: ScanContext) -> list[Finding]:
-        return []
-
-
-def _load_optional_configuration_scanner() -> ScannerModule | None:
-    """Carga el escáner de configuración solo si existe en este checkout."""
-
-    try:
-        module = importlib.import_module("pgvault.scanners.configuration_scanner")
-        scanner_class = getattr(module, "ConfigurationScanner")
-    except Exception:
-        return None
-    return scanner_class()
-
-
 def get_default_modules() -> list[ScannerModule]:
     """Return scanner modules included in the base PgVault runtime."""
 
-    modules: list[ScannerModule] = [CatalogBaselineScanner()]
-    configuration_scanner = _load_optional_configuration_scanner()
-    if configuration_scanner is not None:
-        modules.append(configuration_scanner)
-    return modules
+    from modules.pii_scanner.scanner import PiiScanner
+    from pgvault.scanners.configuration_scanner import ConfigurationScanner
+
+    return [
+        PiiScanner(),
+        ConfigurationScanner(),
+    ]
