@@ -499,3 +499,105 @@ newScanBtn.addEventListener("click", () => {
 });
 
 loadProfiles().catch((error) => setMessage(error.message, "error"));
+
+// ─── Reportes PDF ────────────────────────────────────────────────────────────
+// Agregar al final de pgvault/static/app.js
+
+async function downloadReport(type) {
+  if (!currentResult || !currentResult.findings?.length) {
+    alert("No hay hallazgos para generar el reporte.");
+    return;
+  }
+
+  const btn = document.querySelector(`#btn-report-${type}`);
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando...";
+
+  try {
+    const response = await fetch(`/api/reports/${type}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        findings: currentResult.findings,
+        database: currentResult.database,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      alert("Error generando reporte: " + (err.detail || "Error desconocido"));
+      return;
+    }
+
+    // Descarga automática del PDF
+    const blob = await response.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = type === "executive"
+      ? `PgVault_Ejecutivo_${currentResult.database}.pdf`
+      : `PgVault_Tecnico_${currentResult.database}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    alert("Error de red: " + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function renderReportButtons() {
+  // Elimina botones anteriores si existen
+  const existing = document.querySelector("#report-buttons");
+  if (existing) existing.remove();
+
+  if (!currentResult?.findings?.length) return;
+
+  const container = document.createElement("div");
+  container.id = "report-buttons";
+  container.style.cssText = `
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border, #e5e7eb);
+    margin-top: 8px;
+  `;
+
+  container.innerHTML = `
+    <button
+      id="btn-report-executive"
+      type="button"
+      onclick="downloadReport('executive')"
+      style="flex:1; padding:8px 12px; background:#6366f1; color:white;
+             border:none; border-radius:6px; cursor:pointer; font-size:13px;
+             font-weight:600;"
+    >
+      ↓ Reporte Ejecutivo
+    </button>
+    <button
+      id="btn-report-technical"
+      type="button"
+      onclick="downloadReport('technical')"
+      style="flex:1; padding:8px 12px; background:#0f0f23; color:white;
+             border:none; border-radius:6px; cursor:pointer; font-size:13px;
+             font-weight:600;"
+    >
+      ↓ Reporte Técnico
+    </button>
+  `;
+
+  // Inserta los botones debajo del summary, antes del historial
+  const historyBlock = document.querySelector(".history-block");
+  historyBlock.parentNode.insertBefore(container, historyBlock);
+}
+
+// Sobreescribe showResult para que también renderice los botones
+const _originalShowResult = showResult;
+// Redefine showResult agregando renderReportButtons al final
+window.showResult = function(result, alias, persistHistory = true) {
+  _originalShowResult(result, alias, persistHistory);
+  renderReportButtons();
+};
+
