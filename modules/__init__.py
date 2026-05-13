@@ -1,8 +1,13 @@
-from .models import Finding, Severity, ColumnMeta, ScanResult, RegulationRef
-from .pipeline import run_pii_scan
+"""Compatibility exports for legacy ``modules`` imports.
+
+Canonical PgVault contracts live in ``pgvault.models``. Keep this package
+lightweight so importing subpackages such as ``modules.pii_scanner`` does not
+eagerly load older experimental pipeline code.
+"""
+
+from pgvault.models import ColumnMeta, Finding, RegulationRef, ScanResult, Severity
 
 __all__ = [
-    "run_pii_scan",
     "Finding",
     "Severity",
     "ColumnMeta",
