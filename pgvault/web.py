@@ -14,6 +14,7 @@ from pgvault.config import PgVaultConfig
 from pgvault.db import DatabaseClient
 from pgvault.orchestrator import run_scan
 from pgvault.storage import WebStorage
+from pgvault.reports_api import router as reports_router
 
 
 DEFAULT_STORAGE_PATH = Path(os.getenv("PGVAULT_WEB_DB", "data/pgvault_web.sqlite"))
@@ -185,7 +186,7 @@ def create_app(
             status_code=404,
             detail="Scan history is stored only in the user's browser.",
         )
-
+    app.include_router(reports_router)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     return app
 
