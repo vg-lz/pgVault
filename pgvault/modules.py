@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -39,7 +40,22 @@ class CatalogBaselineScanner:
         return []
 
 
+def _load_optional_configuration_scanner() -> ScannerModule | None:
+    """Carga el escáner de configuración solo si existe en este checkout."""
+
+    try:
+        module = importlib.import_module("pgvault.scanners.configuration_scanner")
+        scanner_class = getattr(module, "ConfigurationScanner")
+    except Exception:
+        return None
+    return scanner_class()
+
+
 def get_default_modules() -> list[ScannerModule]:
     """Return scanner modules included in the base PgVault runtime."""
 
-    return [CatalogBaselineScanner()]
+    modules: list[ScannerModule] = [CatalogBaselineScanner()]
+    configuration_scanner = _load_optional_configuration_scanner()
+    if configuration_scanner is not None:
+        modules.append(configuration_scanner)
+    return modules
