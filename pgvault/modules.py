@@ -12,7 +12,14 @@ from pgvault.models import CatalogSnapshot, Finding, ScanWarning
 
 @dataclass
 class ScanContext:
-    """Shared runtime data passed to every scanner module."""
+    """Shared runtime data passed to every scanner module.
+
+    Modules should read catalog metadata from ``context.snapshot`` first and
+    only run extra SQL through ``context.db`` when metadata is not enough. Any
+    SQL must pass PgVault's read-only guard. Modules return ``list[Finding]``
+    using ``pgvault.models.Finding`` and append non-fatal limitations to
+    ``context.warnings`` when a check cannot run completely.
+    """
 
     config: PgVaultConfig
     db: DatabaseClient
@@ -22,7 +29,7 @@ class ScanContext:
 
 
 class ScannerModule(Protocol):
-    """Protocol implemented by every scanner that emits findings."""
+    """Protocol implemented by every scanner that emits canonical findings."""
 
     name: str
 
@@ -30,16 +37,9 @@ class ScannerModule(Protocol):
         ...
 
 
-class CatalogBaselineScanner:
-    """Baseline scanner registered by default until domain modules are added."""
-
-    name = "catalog_baseline"
-
-    async def run(self, context: ScanContext) -> list[Finding]:
-        return []
-
-
 def get_default_modules() -> list[ScannerModule]:
     """Return scanner modules included in the base PgVault runtime."""
 
-    return [CatalogBaselineScanner()]
+    from modules.pii_scanner.scanner import PiiScanner
+
+    return [PiiScanner()]
