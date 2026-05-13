@@ -1,0 +1,47 @@
+# =====================================================================
+# FintechDB v1.0 — Docker Compose
+# Mexican fintech demo database for PgVault project (SIS2404)
+#
+# Usage:
+#   docker compose up -d           # Start the database
+#   docker compose logs -f db      # Watch the seeding progress
+#   docker compose down -v         # Stop and remove all data
+#
+# WARNING: This DB intentionally contains insecure practices for
+# pedagogical purposes. NEVER use this configuration in production.
+# =====================================================================
+
+services:
+  db:
+    image: postgres:16
+    container_name: fintechdb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fintechdb
+      POSTGRES_USER: fintech_user
+      POSTGRES_PASSWORD: fintech_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"   # Different port from TiendaDB to allow both running
+    volumes:
+      # Init scripts run in alphabetical order on first start
+      - ./init:/docker-entrypoint-initdb.d:ro
+      # Custom postgresql.conf with planted misconfigs (H08, H10)
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      # Custom pg_hba.conf with planted insecure auth (H03)
+      - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      # Data persistence
+      - fintech_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fintech_user -d fintechdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  fintech_data:
+    name: fintechdb_data
