@@ -29,6 +29,9 @@ class ConfigurationScanner:
         # Regla 3: Detectar configuración de logging insegura
         findings.extend(self._check_logging_configuration(context))
 
+        # Regla 4: Detectar reglas pg_hba.conf inseguras (trust desde red)
+        findings.extend(self._check_hba_trust_rules(context))
+
         return findings
 
     def _check_superuser_roles(self, context: ScanContext) -> list[Finding]:
@@ -195,3 +198,87 @@ class ConfigurationScanner:
             )
 
         return findings
+
+    def _check_hba_trust_rules(self, context: ScanContext) -> list[Finding]:
+        """Detecta reglas pg_hba.conf con autenticación 'trust' desde redes externas."""
+
+        findings: list[Finding] = []
+
+        # Buscar reglas con método de autenticación 'trust'
+        trust_rules = [
+            rule for rule in context.snapshot.hba_rules
+            if rule.auth_method and rule.auth_method.lower() == "trust"
+        ]
+
+        for rule in trust_rules:
+            # Determinar si la regla permite acceso desde red (no local)
+            is_network_rule = False
+            address_display = "local"
+            
+            if rule.address:
+                address_display = rule.address
+                # Reglas peligrosas: 0.0.0.0/0, ::/0, o cualquier CIDR amplio
+                if rule.address in ("0.0.0.0/0", "0.0.0.0", "::/0", "::") or \
+                   rule.address.startswith("0.0.0.0") or \
+                   (rule.address.startswith("::") and not rule.address == "::1"):
+                    is_network_rule = True
+            
+            # Si no tiene address pero el tipo es 'host', también es red
+            if rule.rule_type == "host" and not rule.address:
+                is_network_rule = True
+
+            # Determinar severidad basada en alcance
+            severity = Severity.CRITICAL if is_network_rule else Severity.HIGH
+
+            # Construir detalles de usuarios y bases afectadas
+            users_str = ", ".join(rule.user) if rule.user else "todos"
+            databases_str = ", ".join(rule.database) if rule.database else "todas"
+
+            findings.append(
+                Finding(
+                    id=f"CFG-005-hba-line-{rule.line_number}" if rule.line_number else "CFG-005-hba-trust",
+                    module=self.name,
+                    category="authentication",
+                    title=f"pg_hba.conf permite autenticación 'trust' desde {address_display}",
+                    description=(
+                        f"El archivo pg_hba.conf contiene una regla que permite autenticación sin contraseña "
+                        f"(método 'trust') para usuarios '{users_str}' en bases '{databases_str}' "
+                        f"desde '{address_display}'. Esto significa que cualquier conexión desde esa red "
+                        f"puede acceder sin credenciales, representando un riesgo crítico de seguridad."
+                    ),
+                    severity=severity,
+                    evidence=(
+                        f"SELECT * FROM pg_hba_file_rules WHERE line_number = {rule.line_number};"
+                        if rule.line_number else
+                        "SELECT * FROM pg_hba_file_rules WHERE auth_method = 'trust';"
+                    ),
+                    recommendation=(
+                        "Eliminar la línea de pg_hba.conf que permite 'trust'. "
+                        "Usar métodos de autenticación seguros como 'scram-sha-256' o 'md5', "
+                        "preferiblemente con SSL/TLS (hostssl en lugar de host)."
+                    ),
+                    remediation_sql=(
+                        "-- Editar pg_hba.conf manualmente y reemplazar la línea:\n"
+                        f"-- Línea {rule.line_number}: ... trust\n"
+                        "-- Por:\n"
+                        f"-- hostssl {databases_str} {users_str} {address_display if address_display != 'local' else '127.0.0.1/32'} scram-sha-256\n"
+                        "-- Luego recargar configuración:\n"
+                        "SELECT pg_reload_conf();"
+                    ),
+                    regulation_refs=[
+                        RegulationRef(
+                            framework="PCI-DSS",
+                            article="Req. 8.2",
+                            description="Asegurar autenticación de usuarios con credenciales únicas.",
+                        ),
+                        RegulationRef(
+                            framework="OWASP",
+                            article="A07:2021",
+                            description="Identification and Authentication Failures.",
+                        ),
+                    ],
+                )
+            )
+
+        return findings
+
