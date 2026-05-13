@@ -17,8 +17,9 @@ La base contiene:
 - CLI JSON en `pgvault/cli.py`.
 - Dockerfile y Docker Compose para ejecutar el proyecto de forma consistente.
 
-La base no contiene checks finales de seguridad, scanner PII completo,
-reportes, dashboard ni datos demo hardcodeados.
+La base no contiene los checks finales de configuracion/privilegios ni el PDF
+profesional, pero si incluye un primer modulo real de PII por nombre y sampling
+seguro para probar el flujo end-to-end sin hardcodear problemas de FintechDB.
 
 ## Estructura
 
@@ -31,14 +32,14 @@ pgvault/
   modules.py       Interfaz para scanners.
   orchestrator.py  Flujo principal del scan.
   cli.py           Entrada por linea de comandos.
+  web.py           API FastAPI que usa el mismo orquestador.
 
 modules/
-  pii_scanner/     Scanner PII existente conectado al contrato compartido.
+  pii_scanner/     Scanner PII conectado a ScannerModule.
 
 tests/
-  test_config.py
-  test_readonly_guard.py
-  test_orchestrator.py
+  test_base_architecture.py
+  test_demo_databases.py
 ```
 
 ## Uso con Docker Compose
@@ -53,11 +54,15 @@ Levantar PostgreSQL y ejecutar PgVault:
 docker compose up --build
 ```
 
-El servicio `postgres` usa PostgreSQL 16, una base `fintechdb` y credenciales
-locales de desarrollo. El servicio `pgvault` espera el healthcheck de Postgres
-y luego ejecuta `python -m pgvault scan`.
+El compose principal levanta la web de PgVault y las bases demo `fintechdb`,
+`tiendadb` y `appdb`. El servicio `pgvault` corre Uvicorn; el CLI queda
+disponible dentro del mismo contenedor.
 
-La salida es un `ScanResult` serializado como JSON.
+Ejecutar CLI contra la configuracion del contenedor:
+
+```bash
+docker compose run --rm pgvault python -m pgvault scan
+```
 
 ## Validacion con Docker
 
@@ -128,8 +133,10 @@ configuracion, privilegios y futuros reportes. Incluye:
 - Cumplimiento: `regulation_refs`.
 - Extensiones futuras: `metadata`.
 
-El snapshot de catalogo se representa con `CatalogSnapshot` e incluye columnas,
-roles, funciones, extensiones, settings y reglas HBA cuando estan disponibles.
+El snapshot de catalogo se representa con `CatalogSnapshot` e incluye schemas,
+tablas, columnas, roles, membresias, funciones, extensiones, settings, reglas
+HBA, privilegios visibles, metadata RLS y estimaciones de filas cuando estan
+disponibles. No lee datos reales de tablas.
 
 ## Guardia read-only
 
@@ -175,6 +182,23 @@ result = await run_scan(modules=[MyScanner()])
 Cada modulo recibe `ScanContext`, que contiene `config`, `db`, `snapshot`,
 `scan_id` y `warnings`.
 
+Los modulos por defecto se declaran en `get_default_modules()`. Actualmente
+incluye `PiiScanner`, por lo que CLI, web y Docker ejecutan el mismo flujo real.
+
+```mermaid
+flowchart LR
+  C["Config/env/web payload"] --> D["DatabaseClient read-only"]
+  D --> P["Preflight catalog access"]
+  P --> S["CatalogSnapshot"]
+  S --> M["ScannerModule list"]
+  M --> F["Finding[]"]
+  P --> R["ScanResult"]
+  F --> R
+  R --> CLI["CLI JSON"]
+  R --> WEB["/api/scans"]
+  R --> REP["Reports adapters"]
+```
+
 ## Modelos del PII scanner existente
 
 El scanner PII existente usa el contrato compartido de `pgvault.models`.
@@ -183,3 +207,17 @@ imports anteriores.
 
 El archivo raiz `models.py` tambien funciona como re-export temporal de
 `pgvault.models` para reducir rupturas con imports antiguos.
+
+## Guia por integrante
+
+- Integrante 2 debe crear scanners que lean `context.snapshot.settings`,
+  `roles`, `role_memberships`, `functions`, `extensions`, `privileges`, `rls`,
+  `schemas` y `tables`; solo debe consultar `context.db` si el snapshot no
+  basta.
+- Integrante 3 debe extender `modules/pii_scanner` con mejores validadores y
+  heuristicas de contenido. La evidencia debe seguir siendo agregada: conteos,
+  ratios y metadata, nunca valores crudos.
+- Integrante 4 debe consumir `ScanResult.findings`. Para el codigo legacy de
+  `Reports/`, usar `Reports.adapters.scan_result_to_report_findings`.
+- Integrante 5 puede usar CLI, web y Docker sin rutas especiales: todos llaman
+  `pgvault.orchestrator.run_scan`.

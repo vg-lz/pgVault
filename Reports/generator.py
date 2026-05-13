@@ -12,8 +12,12 @@ from reportlab.platypus import (
 )
 from reportlab.graphics.shapes import Drawing, Circle, String
 from reportlab.graphics import renderPDF
-from scoring import calculate_score
-from regulations_map import get_regulations_for_finding
+try:
+    from .scoring import calculate_score
+    from .regulations_map import enrich_regulation_refs, format_regulations_inline
+except ImportError:  # pragma: no cover - keeps direct script execution working.
+    from scoring import calculate_score
+    from regulations_map import enrich_regulation_refs, format_regulations_inline
 
 # ── Rutas ────────────────────────────────────────────────────────────────────
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
@@ -44,6 +48,10 @@ SEVERITY_LABEL = {
     "medium":   "MEDIO",
     "low":      "BAJO",
 }
+
+
+def _severity_key(finding: dict) -> str:
+    return str(finding.get("severity", "low")).lower()
 
 # ── Estilos de texto ──────────────────────────────────────────────────────────
 def _build_styles():
@@ -134,8 +142,9 @@ def _score_circle(score_value: int, label: str) -> Drawing:
 
 def _severity_badge_table(severity: str) -> Table:
     """Badge de severidad coloreado."""
-    color = SEVERITY_COLOR.get(severity, GRAY_BORDER)
-    label = SEVERITY_LABEL.get(severity, severity.upper())
+    severity_key = str(severity).lower()
+    color = SEVERITY_COLOR.get(severity_key, GRAY_BORDER)
+    label = SEVERITY_LABEL.get(severity_key, severity_key.upper())
     t = Table([[label]], colWidths=[1.8 * cm], rowHeights=[0.5 * cm])
     t.setStyle(TableStyle([
         ("BACKGROUND",  (0, 0), (-1, -1), color),
@@ -259,7 +268,7 @@ def generate_executive_report(findings: list[dict], output_path: str = None) -> 
     styles    = _build_styles()
     score_data = calculate_score(findings)
 
-    critical_findings = [f for f in findings if f["severity"] == "critical"][:5]
+    critical_findings = [f for f in findings if _severity_key(f) == "critical"][:5]
     by_module = {}
     for f in findings:
         mod = f.get("module", "otro")
@@ -285,11 +294,14 @@ def generate_executive_report(findings: list[dict], output_path: str = None) -> 
     if critical_findings:
         elems += _section_header("Top riesgos críticos", styles)
         for f in critical_findings:
-            color = SEVERITY_COLOR.get(f["severity"], GRAY_BORDER)
-            regs  = ", ".join(f.get("regulations", []))
+            severity = _severity_key(f)
+            color = SEVERITY_COLOR.get(severity, GRAY_BORDER)
+            regs = format_regulations_inline(f.get("regulation_refs", []))
+            if not regs:
+                regs = ", ".join(f.get("regulations", []))
 
             card_data = [
-                [_severity_badge_table(f["severity"]),
+                [_severity_badge_table(severity),
                  Paragraph(f"<b>{f['title']}</b>", styles["body"])],
                 ["", Paragraph(f["description"], styles["body_muted"])],
             ]
@@ -318,8 +330,8 @@ def generate_executive_report(findings: list[dict], output_path: str = None) -> 
 
     module_rows = [["Módulo", "Total", "Críticos", "Altos"]]
     for mod, items in by_module.items():
-        crits = sum(1 for i in items if i["severity"] == "critical")
-        highs = sum(1 for i in items if i["severity"] == "high")
+        crits = sum(1 for i in items if _severity_key(i) == "critical")
+        highs = sum(1 for i in items if _severity_key(i) == "high")
         module_rows.append([mod.capitalize(), str(len(items)), str(crits), str(highs)])
 
     mod_table = Table(module_rows, colWidths=[8*cm, 3*cm, 2.5*cm, 2.5*cm])
@@ -349,12 +361,17 @@ def generate_technical_report(findings: list[dict], output_path: str = None) -> 
 
     # Adjunta detalles regulatorios y ordena por severidad
     for f in findings:
-        f["regulation_details"] = get_regulations_for_finding(
-            f.get("regulations", [])
-        )
+        reg_refs = f.get("regulation_refs", [])
+        if reg_refs:
+            f["regulation_details"] = enrich_regulation_refs(reg_refs)
+        else:
+            f["regulation_details"] = [
+                {"law": reg, "article": "", "title": reg, "description": "", "url": ""}
+                for reg in f.get("regulations", [])
+            ]
     severity_order  = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     findings_sorted = sorted(findings,
-                             key=lambda f: severity_order.get(f["severity"], 4))
+                             key=lambda f: severity_order.get(_severity_key(f), 4))
 
     out = output_path or str(OUTPUT_DIR / "reporte_tecnico.pdf")
     doc = SimpleDocTemplate(
@@ -381,11 +398,12 @@ def generate_technical_report(findings: list[dict], output_path: str = None) -> 
     elems.append(Spacer(1, 0.3 * cm))
 
     for i, f in enumerate(findings_sorted, 1):
-        color = SEVERITY_COLOR.get(f["severity"], GRAY_BORDER)
+        severity = _severity_key(f)
+        color = SEVERITY_COLOR.get(severity, GRAY_BORDER)
 
         # Encabezado del hallazgo
         header_data = [[
-            _severity_badge_table(f["severity"]),
+            _severity_badge_table(severity),
             Paragraph(
                 f"<b>[{f.get('id', f'F-{i:03d}')}] {f['title']}</b>",
                 ParagraphStyle("fh", fontSize=11, fontName="Helvetica-Bold",
