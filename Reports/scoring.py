@@ -1,22 +1,21 @@
 # scoring.py
 
 SEVERITY_WEIGHTS = {
-    "critical": 15,
-    "high":      8,
-    "medium":    3,
-    "low":       1,
+    "CRITICAL": 15,
+    "HIGH":      8,
+    "MEDIUM":    3,
+    "LOW":       1,
 }
 
 def calculate_score(findings: list[dict]) -> dict:
     """
     Recibe lista de hallazgos, regresa score y desglose.
-    Cada finding debe tener al menos {"severity": "critical"|"high"|"medium"|"low"}
     """
     deduction = 0
-    breakdown = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    breakdown = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
 
     for f in findings:
-        sev = f.get("severity", "low")
+        sev = f.get("severity", "LOW").upper()
         deduction += SEVERITY_WEIGHTS.get(sev, 1)
         breakdown[sev] += 1
 
