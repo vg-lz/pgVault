@@ -1,2 +1,0 @@
-mkdir -p modules/pii_scanner/validators
-mkdir -p modules/pii_scanner/tests

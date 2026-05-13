@@ -74,6 +74,32 @@ class ColumnMeta(BaseModel):
     table_type: str | None = None
 
 
+class SchemaMeta(BaseModel):
+    """Schema metadata used by security and privilege scanners."""
+
+    schema_name: str
+    owner: str | None = None
+
+
+class TableMeta(BaseModel):
+    """Table/view metadata extracted without reading table contents."""
+
+    table_schema: str
+    table_name: str
+    table_type: str
+    owner: str | None = None
+    row_estimate: int | None = None
+
+
+class RoleMembershipMeta(BaseModel):
+    """Role membership edge from member role to parent role."""
+
+    member: str
+    role: str
+    grantor: str | None = None
+    admin_option: bool | None = None
+
+
 class RoleMeta(BaseModel):
     """Role and membership metadata extracted from PostgreSQL."""
 
@@ -94,6 +120,7 @@ class FunctionMeta(BaseModel):
     owner: str | None = None
     language: str | None = None
     security_definer: bool = False
+    proconfig: list[str] = Field(default_factory=list)
 
 
 class ExtensionMeta(BaseModel):
@@ -127,18 +154,44 @@ class HbaRuleMeta(BaseModel):
     error: str | None = None
 
 
+class PrivilegeMeta(BaseModel):
+    """Grant metadata for schemas and tables visible to the connected role."""
+
+    object_type: str
+    object_schema: str
+    object_name: str | None = None
+    grantee: str
+    privilege_type: str
+    grantable: bool | None = None
+
+
+class RlsMeta(BaseModel):
+    """Row-level security metadata for a relation."""
+
+    table_schema: str
+    table_name: str
+    rls_enabled: bool
+    rls_forced: bool
+    policy_count: int = 0
+
+
 class CatalogSnapshot(BaseModel):
     """Read-only snapshot of database catalog metadata."""
 
     database_name: str
     current_user: str
     captured_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    schemas: list[SchemaMeta] = Field(default_factory=list)
+    tables: list[TableMeta] = Field(default_factory=list)
     columns: list[ColumnMeta] = Field(default_factory=list)
     roles: list[RoleMeta] = Field(default_factory=list)
+    role_memberships: list[RoleMembershipMeta] = Field(default_factory=list)
     functions: list[FunctionMeta] = Field(default_factory=list)
     extensions: list[ExtensionMeta] = Field(default_factory=list)
     settings: list[SettingMeta] = Field(default_factory=list)
     hba_rules: list[HbaRuleMeta] = Field(default_factory=list)
+    privileges: list[PrivilegeMeta] = Field(default_factory=list)
+    rls: list[RlsMeta] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

@@ -5,12 +5,44 @@ older imports from `modules.pii_scanner.models` continue to resolve while the
 scanner code uses the central PgVault models.
 """
 
-from pgvault.models import ColumnMeta, Finding, RegulationRef, ScanResult, Severity
+from pgvault.models import (
+    CatalogSnapshot,
+    ColumnMeta,
+    ExtensionMeta,
+    Finding,
+    FunctionMeta,
+    HbaRuleMeta,
+    PrivilegeMeta,
+    RegulationRef,
+    RlsMeta,
+    RoleMembershipMeta,
+    RoleMeta,
+    ScanError,
+    ScanResult,
+    ScanWarning,
+    SchemaMeta,
+    SettingMeta,
+    Severity,
+    TableMeta,
+)
 
 __all__ = [
     "ColumnMeta",
+    "CatalogSnapshot",
+    "ExtensionMeta",
     "Finding",
+    "FunctionMeta",
+    "HbaRuleMeta",
+    "PrivilegeMeta",
     "RegulationRef",
+    "RlsMeta",
+    "RoleMembershipMeta",
+    "RoleMeta",
+    "ScanError",
     "ScanResult",
+    "ScanWarning",
+    "SchemaMeta",
+    "SettingMeta",
     "Severity",
+    "TableMeta",
 ]
