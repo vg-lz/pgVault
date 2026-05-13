@@ -110,7 +110,7 @@ en roles, funciones, logging y autenticación.
 | ID | Descripción | Severidad |
 |---|---|---|
 | **CFG-001** | Roles con privilegio SUPERUSER innecesario (excluyendo 'postgres') | HIGH |
-| **CFG-002** | Funciones SECURITY DEFINER sin `search_path` seguro | CRITICAL |
+| **CFG-002** | Funciones SECURITY DEFINER - requiere verificación manual de `search_path` | MEDIUM |
 | **CFG-003** | Logging de conexiones desactivado (`log_connections = off`) | HIGH |
 | **CFG-004** | Logging de desconexiones desactivado (`log_disconnections = off`) | MEDIUM |
 | **CFG-005** | Autenticación 'trust' en `pg_hba.conf` desde redes externas | CRITICAL/HIGH |

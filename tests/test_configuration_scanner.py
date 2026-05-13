@@ -160,7 +160,7 @@ async def test_detects_security_definer_without_search_path(mock_context_with_is
     
     cfg002_findings = [f for f in findings if f.id.startswith("CFG-002")]
     assert len(cfg002_findings) == 1
-    assert cfg002_findings[0].severity == "CRITICAL"
+    assert cfg002_findings[0].severity == "MEDIUM"
     assert "unsafe_definer" in cfg002_findings[0].evidence
 
 

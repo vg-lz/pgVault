@@ -6,6 +6,7 @@ configuración del servidor y reglas de autenticación de PostgreSQL.
 
 from __future__ import annotations
 
+from pgvault.db import quote_identifier
 from pgvault.models import Finding, RegulationRef, Severity
 from pgvault.modules import ScanContext
 
@@ -67,7 +68,7 @@ class ConfigurationScanner:
                         "Revocar SUPERUSER y otorgar solo los privilegios específicos necesarios. "
                         "Usar roles dedicados para distintas funciones operativas."
                     ),
-                    remediation_sql=f"ALTER ROLE {role.role_name} NOSUPERUSER;",
+                    remediation_sql=f"ALTER ROLE {quote_identifier(role.role_name)} NOSUPERUSER;",
                     regulation_refs=[
                         RegulationRef(
                             framework="PCI-DSS",
@@ -98,14 +99,14 @@ class ConfigurationScanner:
                     id=f"CFG-002-{func.schema_name}-{func.function_name}",
                     module=self.name,
                     category="functions",
-                    title=f"Función '{func.schema_name}.{func.function_name}' es SECURITY DEFINER sin search_path seguro",
+                    title=f"Función '{func.schema_name}.{func.function_name}' es SECURITY DEFINER - requiere verificación manual de search_path",
                     description=(
                         f"La función '{func.schema_name}.{func.function_name}' se ejecuta con "
-                        "privilegios del propietario (SECURITY DEFINER) pero puede no tener "
-                        "un search_path explícito configurado, lo que la hace vulnerable a ataques "
-                        "de inyección de objetos maliciosos en esquemas públicos."
+                        "privilegios del propietario (SECURITY DEFINER). Este scanner NO puede verificar automáticamente "
+                        "si tiene un search_path seguro configurado (requiere acceso a pg_proc.proconfig). "
+                        "Se recomienda verificación manual para evitar ataques de inyección de objetos maliciosos."
                     ),
-                    severity=Severity.CRITICAL,
+                    severity=Severity.MEDIUM,
                     evidence=(
                         f"SELECT proname, prosecdef FROM pg_proc "
                         f"WHERE proname = '{func.function_name}';"
@@ -115,8 +116,8 @@ class ConfigurationScanner:
                         "preferiblemente solo pg_catalog y el esquema de la función."
                     ),
                     remediation_sql=(
-                        f"ALTER FUNCTION {func.schema_name}.{func.function_name}() "
-                        f"SET search_path = pg_catalog, {func.schema_name};"
+                        f"ALTER FUNCTION {quote_identifier(func.schema_name)}.{quote_identifier(func.function_name)}() "
+                        f"SET search_path = pg_catalog, {quote_identifier(func.schema_name)};"
                     ),
                     regulation_refs=[
                         RegulationRef(
@@ -326,9 +327,9 @@ class ConfigurationScanner:
                     ),
                     remediation_sql=(
                         f"-- Forzar cambio de contraseña para '{role.role_name}':\n"
-                        f"ALTER ROLE {role.role_name} PASSWORD 'nueva_contraseña_robusta';\n"
+                        f"ALTER ROLE {quote_identifier(role.role_name)} PASSWORD 'nueva_contraseña_robusta';\n"
                         "-- Considerar renombrar el rol:\n"
-                        f"ALTER ROLE {role.role_name} RENAME TO {role.role_name}_produccion;"
+                        f"ALTER ROLE {quote_identifier(role.role_name)} RENAME TO {quote_identifier(role.role_name + '_produccion')};"
                     ),
                     regulation_refs=[
                         RegulationRef(
@@ -395,9 +396,9 @@ class ConfigurationScanner:
                     ),
                     remediation_sql=(
                         f"-- Si no se necesita, eliminar la extensión:\n"
-                        f"DROP EXTENSION IF EXISTS {ext.name};\n"
+                        f"DROP EXTENSION IF EXISTS {quote_identifier(ext.name)};\n"
                         "-- Si se necesita, restringir privilegios:\n"
-                        f"REVOKE ALL ON EXTENSION {ext.name} FROM PUBLIC;"
+                        f"REVOKE ALL ON EXTENSION {quote_identifier(ext.name)} FROM PUBLIC;"
                     ),
                     regulation_refs=[
                         RegulationRef(
