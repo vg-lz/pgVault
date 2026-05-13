@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
-from .models import ColumnMeta, RegulationRef
+
+from pgvault.models import ColumnMeta, RegulationRef
 
 REGULATION_LFPDPPP = RegulationRef(
     framework="LFPDPPP",
@@ -170,4 +171,4 @@ def scan_by_name(columns: list[ColumnMeta]) -> list[NameMatch]:
                     matched_pattern=pattern.pattern.pattern,
                 ))
                 break
-    return matches. 
+    return matches

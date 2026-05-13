@@ -1,6 +1,8 @@
 # PgVault
 
-PgVault es un auditor de seguridad y cumplimiento para PostgreSQL. Se conecta en modo read-only, analiza configuración, privilegios y datos sensibles, y genera hallazgos con evidencia, recomendaciones automáticas, score y reportes.
+PgVault es un auditor de seguridad y cumplimiento para PostgreSQL. Se conecta
+en modo read-only, analiza configuracion, privilegios y datos sensibles, y
+produce hallazgos con evidencia y recomendaciones.
 
 ## Equipo
 
@@ -12,52 +14,85 @@ Integrantes del equipo:
 - Rito Michelena, Mariajose
 - Vega Cabrera, Diego
 
-Cuando el equipo defina roles, llenar esta tabla. En GitHub Projects, Issues y PRs se recomienda usar el número de integrante para mantener todo ordenado.
-
 | Integrante | Rol principal | Nombre |
 |---|---|---|
 | Integrante 1 | Conector y orquestador | Diego Vega |
-| Integrante 2 | Auditor de configuración | Dowshell smith  |
-| Integrante 3 |Descubridor de datos sensibles  | Daniela Bórquez |
+| Integrante 2 | Auditor de configuracion | Dowshell Smith |
+| Integrante 3 | Descubridor de datos sensibles | Daniela Borquez |
 | Integrante 4 | Reportes y mapeo regulatorio | Mariajose Rito |
-| Integrante 5 | Producto, negocio y coordinación | Cesar Mendez |
-
-Aunque cada quien tenga un rol principal después, todos deben entender lo básico del proyecto completo.
+| Integrante 5 | Producto, negocio y coordinacion | Cesar Mendez |
 
 ## Entregas
 
-- **9 de mayo:** base inicial, roles, tablero, primeras tareas y avance técnico inicial.
-- **12 de mayo:** demo parcial con integración y al menos 8 hallazgos funcionando.
+- **9 de mayo:** base inicial, roles, tablero, primeras tareas y avance tecnico inicial.
+- **12 de mayo:** demo parcial con integracion y al menos 8 hallazgos funcionando.
 - **15 de mayo:** MVP final, Docker Compose, reportes, pitch, video demo y Q&A.
 
-## Documentos útiles
+## Documentos utiles
 
+- [Guia base](docs/BASE.md)
 - [GitHub Projects](docs/CONTROL_GITHUB_PROJECTS.md)
 - [Reglas de Git](docs/REGLAS_GIT.md)
 - [Roles](docs/ROLES.md)
 
+## Ejecucion
+
+El proyecto esta preparado para ejecutarse con Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+## Validacion con Docker
+
+1. Verificar la configuracion de Compose:
+
+```bash
+docker compose config
+```
+
+2. Construir la imagen de PgVault:
+
+```bash
+docker compose build pgvault
+```
+
+3. Ejecutar pruebas dentro del contenedor:
+
+```bash
+docker compose run --rm --no-deps pgvault python -m pytest -q
+```
+
+4. Levantar PostgreSQL y ejecutar PgVault:
+
+```bash
+docker compose up --build
+```
+
 ## Alcance del MVP
 
-- Conexión read-only a PostgreSQL.
-- Extracción de información del catálogo.
-- Checks de seguridad y configuración.
-- Detección de datos sensibles por nombre y contenido.
-- Recomendaciones automáticas por hallazgo detectado.
+- Conexion read-only a PostgreSQL.
+- Extraccion de informacion del catalogo.
+- Checks de seguridad y configuracion.
+- Deteccion de datos sensibles por nombre y contenido.
+- Recomendaciones automaticas por hallazgo detectado.
 - Dashboard o salida visual.
-- Reporte ejecutivo y técnico.
-- Exportación a PDF.
+- Reporte ejecutivo y tecnico.
+- Exportacion a PDF.
 - Docker Compose.
 
-## Tecnología
+## Tecnologia
 
-El equipo puede elegir las herramientas que considere mejores. Se permite usar herramientas open source e IA, siempre que se entienda, se valide y se declare su uso.
+El equipo puede elegir las herramientas que considere mejores. Se permite usar
+herramientas open source e IA, siempre que se entienda, se valide y se declare
+su uso.
 
 Condiciones importantes:
 
 - El producto debe respetar read-only.
 - Debe correr con `docker compose up`.
 - No debe depender de hardcodear la base demo.
-- Cada hallazgo importante debe incluir una recomendación clara.
+- Cada hallazgo importante debe incluir una recomendacion clara.
 - Todos deben poder explicar lo que se entrega.
 
 ## Flujo de trabajo
@@ -66,8 +101,8 @@ Condiciones importantes:
 2. Crear rama propia.
 3. Hacer commits claros.
 4. Abrir Pull Request.
-5. Pedir revisión cruzada.
-6. Hacer merge solo cuando el PR esté aprobado.
+5. Pedir revision cruzada.
+6. Hacer merge solo cuando el PR este aprobado.
 
 Estados del Project:
 
@@ -78,4 +113,5 @@ Estados del Project:
 
 ## Uso de IA
 
-Se puede usar IA para apoyo, investigación, documentación, revisión o ideas técnicas. Cualquier uso relevante debe declararse en el Pull Request.
+Se puede usar IA para apoyo, investigacion, documentacion, revision o ideas
+tecnicas. Cualquier uso relevante debe declararse en el Pull Request.

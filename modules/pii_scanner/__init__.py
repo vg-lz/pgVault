@@ -1,4 +1,4 @@
-from .models import Finding, Severity, ColumnMeta, ScanResult, RegulationRef
+from pgvault.models import ColumnMeta, Finding, RegulationRef, ScanResult, Severity
 
 __all__ = [
     "Finding",
