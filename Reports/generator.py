@@ -387,7 +387,7 @@ def generate_technical_report(findings: list[dict], output_path: str = None) -> 
         header_data = [[
             _severity_badge_table(f["severity"]),
             Paragraph(
-                f"<b>[{f.get('finding_id', f'F-{i:03d}')}] {f['title']}</b>",
+                f"<b>[{f.get('id', f'F-{i:03d}')}] {f['title']}</b>",
                 ParagraphStyle("fh", fontSize=11, fontName="Helvetica-Bold",
                                textColor=TEXT_DARK)
             ),
