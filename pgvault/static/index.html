@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pgvault</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">postgresql security auditor</p>
+        <h1>pgvault</h1>
+      </div>
+      <div class="status-pill" id="app-status">sin validar</div>
+    </header>
+
+    <main>
+      <section class="connection-screen" id="connection-screen">
+        <aside class="profile-sidebar">
+          <div class="profile-sidebar-head">
+            <div>
+              <p class="eyebrow">perfiles</p>
+              <h2>Conexiones</h2>
+            </div>
+            <button type="button" id="new-profile-btn" class="icon-btn" title="Nuevo perfil">+</button>
+          </div>
+          <div id="profile-list" class="profile-list"></div>
+        </aside>
+
+        <form id="connection-form" class="connection-form">
+          <div class="form-head">
+            <div>
+              <h2>Conexión PostgreSQL</h2>
+              <p>Configura una conexión read-only para validar y ejecutar la revisión.</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <label>Alias<input name="alias" autocomplete="off" required value="fintechdb-demo" /></label>
+            <label>Host<input name="host" required value="fintechdb" /></label>
+            <label>Puerto<input name="port" type="number" min="1" max="65535" required value="5432" /></label>
+            <label>Base de datos<input name="database" required value="fintechdb" /></label>
+            <label>Usuario<input name="user" required value="fintech_user" /></label>
+            <label>Contraseña<input name="password" type="password" autocomplete="current-password" /></label>
+            <label>
+              sslmode
+              <select name="sslmode">
+                <option>disable</option>
+                <option>allow</option>
+                <option selected>prefer</option>
+                <option>require</option>
+                <option>verify-ca</option>
+                <option>verify-full</option>
+              </select>
+            </label>
+            <label>Sample limit<input name="sample_limit" type="number" min="0" max="10000" value="100" /></label>
+            <label>Query timeout<input name="query_timeout" type="number" min="0.1" max="120" step="0.1" value="10" /></label>
+          </div>
+
+          <p class="secret-note">
+            La contraseña se usa solo para conectar en esta sesión. Los perfiles se guardan solo en este navegador y sin contraseña.
+          </p>
+
+          <div id="message" class="message" role="status"></div>
+          <div class="actions">
+            <button type="button" id="save-btn" class="secondary">Guardar / actualizar</button>
+            <button type="button" id="validate-btn">Validar conexión</button>
+            <button type="button" id="scan-btn" class="primary" disabled>Realizar revisión</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="results-screen hidden" id="results-screen">
+        <aside class="findings-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">resultado</p>
+              <h2 id="result-title">Hallazgos</h2>
+            </div>
+            <button type="button" id="new-scan-btn" class="ghost">Nueva conexión</button>
+          </div>
+          <div class="summary" id="summary"></div>
+          <div class="history-block">
+            <h3>Historial</h3>
+            <div id="history-list" class="history-list"></div>
+          </div>
+          <div id="finding-list" class="finding-list"></div>
+        </aside>
+
+        <section class="detail-panel" id="detail-panel">
+          <p class="eyebrow">detalle técnico</p>
+          <h2>Selecciona un hallazgo</h2>
+          <p class="muted">Las recomendaciones, SQL sugerido y referencias aparecerán aquí.</p>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

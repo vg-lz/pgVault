@@ -1,39 +1,110 @@
 services:
-  # Local PostgreSQL instance used by the team during development.
-  postgres:
+  # Demo database with planted security/compliance findings.
+  fintechdb:
     image: postgres:16
+    container_name: fintechdb
     environment:
       POSTGRES_DB: fintechdb
-      POSTGRES_USER: pgvault_readonly
-      POSTGRES_PASSWORD: pgvault_password
+      POSTGRES_USER: fintech_user
+      POSTGRES_PASSWORD: fintech_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./demo-databases/fintechdb/init:/docker-entrypoint-initdb.d:ro
+      - ./demo-databases/fintechdb/config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./demo-databases/fintechdb/config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - fintechdb_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fintech_user -d fintechdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Demo e-commerce database with planted performance and health issues.
+  tiendadb:
+    image: postgres:16
+    container_name: tiendadb
+    environment:
+      POSTGRES_DB: tiendadb
+      POSTGRES_USER: tienda_user
+      POSTGRES_PASSWORD: tienda_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
-      - pgvault_postgres_data:/var/lib/postgresql/data
+      - ./demo-databases/tiendadb/init:/docker-entrypoint-initdb.d:ro
+      - ./demo-databases/tiendadb/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - tiendadb_data:/var/lib/postgresql/data
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     healthcheck:
-      # PgVault starts only after PostgreSQL is accepting connections.
-      test: ["CMD-SHELL", "pg_isready -U pgvault_readonly -d fintechdb"]
+      test: ["CMD-SHELL", "pg_isready -U tienda_user -d tiendadb"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
 
-  # PgVault application container. It runs one scan and exits with JSON output.
+  # Keeps TiendaDB's intentionally planted idle transaction active.
+  tiendadb_idle_tx:
+    image: postgres:16
+    depends_on:
+      tiendadb:
+        condition: service_healthy
+    volumes:
+      - ./demo-databases/tiendadb/scripts:/scripts:ro
+    environment:
+      PGHOST: tiendadb
+      PGPORT: "5432"
+    command: ["bash", "/scripts/start_idle_tx.sh"]
+
+  # Demo social app database with planted query anti-patterns.
+  appdb:
+    image: postgres:16
+    container_name: appdb
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./demo-databases/appdb/init:/docker-entrypoint-initdb.d:ro
+      - ./demo-databases/appdb/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - appdb_data:/var/lib/postgresql/data
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+
+  # PgVault web application. The CLI remains available with:
+  # docker compose run --rm pgvault python -m pgvault scan
   pgvault:
     build: .
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      PGHOST: postgres
+      PGHOST: fintechdb
       PGPORT: "5432"
       PGDATABASE: fintechdb
-      PGUSER: pgvault_readonly
-      PGPASSWORD: pgvault_password
+      PGUSER: fintech_user
+      PGPASSWORD: fintech_pass
       PGSSLMODE: disable
       PGVAULT_SAMPLE_LIMIT: "100"
       PGVAULT_QUERY_TIMEOUT_SECONDS: "10"
-    command: ["python", "-m", "pgvault", "scan"]
+      PGVAULT_WEB_DB: /app/data/pgvault_web.sqlite
+    ports:
+      - "8000:8000"
+    tmpfs:
+      # Session-only web profiles and scan history. Nothing is versioned or kept
+      # after the PgVault container is removed.
+      - /app/data
+    command: ["uvicorn", "pgvault.web:app", "--host", "0.0.0.0", "--port", "8000"]
 
 volumes:
-  # Keeps the local database files across Compose restarts.
-  pgvault_postgres_data:
+  fintechdb_data:
+  tiendadb_data:
+  appdb_data:
