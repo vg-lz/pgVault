@@ -1,10 +1,11 @@
 """Tests para ConfigurationScanner - Auditor de configuración de seguridad."""
 
 import pytest
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 from pgvault.scanners.configuration_scanner import ConfigurationScanner
 from pgvault.models import (
     CatalogSnapshot,
+    PrivilegeMeta,
     RoleMeta,
     FunctionMeta,
     SettingMeta,
@@ -40,6 +41,7 @@ def mock_context_clean():
         settings=[
             SettingMeta(name="log_connections", setting="on"),
             SettingMeta(name="log_disconnections", setting="on"),
+            SettingMeta(name="archive_mode", setting="on"),
         ],
         extensions=[],
         hba_rules=[
@@ -54,9 +56,10 @@ def mock_context_clean():
             )
         ],
     )
-    # Crear contexto mock con solo snapshot (el scanner solo usa snapshot)
     context = Mock(spec=ScanContext)
     context.snapshot = snapshot
+    context.db = Mock()
+    context.db.fetch = AsyncMock(return_value=[])
     return context
 
 
@@ -94,6 +97,7 @@ def mock_context_with_issues():
         settings=[
             SettingMeta(name="log_connections", setting="off"),  # CFG-003
             SettingMeta(name="log_disconnections", setting="off"),  # CFG-004
+            SettingMeta(name="archive_mode", setting="off"),  # CFG-009: sin PITR
         ],
         extensions=[
             ExtensionMeta(name="dblink", version="1.2", schema_name="public"),  # CFG-007
@@ -118,10 +122,29 @@ def mock_context_with_issues():
                 error=None,
             ),
         ],
+        privileges=[
+            PrivilegeMeta(
+                object_type="table",
+                object_schema="public",
+                object_name="cards",
+                grantee="reports_user",
+                privilege_type="SELECT",
+                grantable=False,
+            ),  # CFG-010: acceso PCI sin necesidad (H05)
+            PrivilegeMeta(
+                object_type="table",
+                object_schema="public",
+                object_name="customers",
+                grantee="PUBLIC",
+                privilege_type="SELECT",
+                grantable=False,
+            ),  # CFG-011: PUBLIC con acceso a PII (H06)
+        ],
     )
-    # Crear contexto mock con solo snapshot (el scanner solo usa snapshot)
     context = Mock(spec=ScanContext)
     context.snapshot = snapshot
+    context.db = Mock()
+    context.db.fetch = AsyncMock(return_value=[{"rolname": "app_legacy"}])  # CFG-008: sin password
     return context
 
 
@@ -203,8 +226,9 @@ async def test_total_findings_count(mock_context_with_issues):
     scanner = ConfigurationScanner()
     findings = await scanner.run(mock_context_with_issues)
     
-    # 1 CFG-001 + 1 CFG-002 + 1 CFG-003 + 1 CFG-004 + 2 CFG-005 + 1 CFG-006 + 1 CFG-007 = 8 hallazgos
-    assert len(findings) == 8
+    # 1 CFG-001 + 1 CFG-002 + 1 CFG-003 + 1 CFG-004 + 2 CFG-005 + 1 CFG-006 + 1 CFG-007
+    # + 1 CFG-008 + 1 CFG-009 + 1 CFG-010 + 1 CFG-011 = 12 hallazgos
+    assert len(findings) == 12
 
 
 @pytest.mark.asyncio
@@ -248,3 +272,62 @@ async def test_detects_dangerous_extensions(mock_context_with_issues):
     assert len(cfg007_findings) == 1
     assert cfg007_findings[0].severity == "MEDIUM"
     assert "dblink" in cfg007_findings[0].evidence
+
+
+@pytest.mark.asyncio
+async def test_detects_role_without_password(mock_context_with_issues):
+    """Debe detectar roles sin contraseña configurada (CFG-008)."""
+    scanner = ConfigurationScanner()
+    findings = await scanner.run(mock_context_with_issues)
+
+    cfg008_findings = [f for f in findings if f.id.startswith("CFG-008")]
+    assert len(cfg008_findings) == 1
+    assert cfg008_findings[0].severity == "HIGH"
+    assert "app_legacy" in cfg008_findings[0].id
+
+
+@pytest.mark.asyncio
+async def test_no_cfg008_when_db_inaccessible(mock_context_clean):
+    """Si pg_authid no es accesible, CFG-008 debe omitirse silenciosamente."""
+    mock_context_clean.db.fetch = AsyncMock(side_effect=Exception("permission denied"))
+    scanner = ConfigurationScanner()
+    findings = await scanner.run(mock_context_clean)
+    cfg008_findings = [f for f in findings if f.id.startswith("CFG-008")]
+    assert len(cfg008_findings) == 0
+
+
+@pytest.mark.asyncio
+async def test_detects_archive_mode_off(mock_context_with_issues):
+    """Debe detectar archive_mode desactivado (CFG-009)."""
+    scanner = ConfigurationScanner()
+    findings = await scanner.run(mock_context_with_issues)
+
+    cfg009_findings = [f for f in findings if f.id == "CFG-009-archive-mode"]
+    assert len(cfg009_findings) == 1
+    assert cfg009_findings[0].severity == "HIGH"
+    assert "archive_mode" in cfg009_findings[0].evidence
+
+
+@pytest.mark.asyncio
+async def test_detects_pci_table_grants(mock_context_with_issues):
+    """Debe detectar roles con SELECT sobre tablas PCI (CFG-010)."""
+    scanner = ConfigurationScanner()
+    findings = await scanner.run(mock_context_with_issues)
+
+    cfg010_findings = [f for f in findings if f.id.startswith("CFG-010")]
+    assert len(cfg010_findings) == 1
+    assert cfg010_findings[0].severity == "CRITICAL"
+    assert "reports_user" in cfg010_findings[0].title
+    assert "cards" in cfg010_findings[0].title
+
+
+@pytest.mark.asyncio
+async def test_detects_public_table_grants(mock_context_with_issues):
+    """Debe detectar grants SELECT a PUBLIC sobre tablas (CFG-011)."""
+    scanner = ConfigurationScanner()
+    findings = await scanner.run(mock_context_with_issues)
+
+    cfg011_findings = [f for f in findings if f.id.startswith("CFG-011")]
+    assert len(cfg011_findings) == 1
+    assert cfg011_findings[0].severity == "HIGH"
+    assert "customers" in cfg011_findings[0].title

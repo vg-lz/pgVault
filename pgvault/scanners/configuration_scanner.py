@@ -39,6 +39,18 @@ class ConfigurationScanner:
         # Regla 6: Detectar extensiones peligrosas instaladas
         findings.extend(self._check_dangerous_extensions(context))
 
+        # Regla 7: Detectar roles sin contraseña configurada (requiere pg_authid)
+        findings.extend(await self._check_no_password_roles(context))
+
+        # Regla 8: Detectar archive_mode desactivado — sin PITR
+        findings.extend(self._check_archive_mode(context))
+
+        # Regla 9: Detectar privilegios excesivos sobre tablas PCI
+        findings.extend(self._check_pci_table_grants(context))
+
+        # Regla 10: Detectar grants SELECT a PUBLIC sobre tablas
+        findings.extend(self._check_public_table_grants(context))
+
         return findings
 
     def _check_superuser_roles(self, context: ScanContext) -> list[Finding]:
@@ -409,6 +421,238 @@ class ConfigurationScanner:
                     ],
                 )
             )
+
+        return findings
+
+    async def _check_no_password_roles(self, context: ScanContext) -> list[Finding]:
+        """Detecta roles con can_login pero sin contraseña configurada (pg_authid)."""
+
+        findings: list[Finding] = []
+
+        try:
+            rows = await context.db.fetch(
+                "SELECT rolname FROM pg_catalog.pg_authid "
+                "WHERE rolpassword IS NULL AND rolcanlogin = true;"
+            )
+            for row in rows:
+                role_name = row["rolname"]
+                findings.append(
+                    Finding(
+                        id=f"CFG-008-{role_name}",
+                        module=self.name,
+                        category="credentials",
+                        title=f"Rol '{role_name}' no tiene contraseña configurada",
+                        description=(
+                            f"El rol '{role_name}' puede iniciar sesión pero no tiene contraseña "
+                            "configurada (pg_authid.rolpassword IS NULL). Cualquier cliente que "
+                            "pueda conectarse como este rol se autenticará sin credenciales, "
+                            "dependiendo únicamente de las reglas de pg_hba.conf."
+                        ),
+                        severity=Severity.HIGH,
+                        evidence=(
+                            "SELECT rolname FROM pg_catalog.pg_authid "
+                            "WHERE rolpassword IS NULL AND rolcanlogin = true;"
+                        ),
+                        recommendation=(
+                            f"Asignar una contraseña robusta al rol '{role_name}' o eliminarlo si no se usa. "
+                            "Asegurarse también de que pg_hba.conf no permita 'trust' para este rol."
+                        ),
+                        remediation_sql=(
+                            f"-- Asignar contraseña robusta:\n"
+                            f"ALTER ROLE {quote_identifier(role_name)} PASSWORD 'contraseña_robusta_aqui';\n"
+                            f"-- O si el rol no se usa, eliminarlo:\n"
+                            f"DROP ROLE IF EXISTS {quote_identifier(role_name)};"
+                        ),
+                        regulation_refs=[
+                            RegulationRef(
+                                framework="PCI-DSS",
+                                article="Req. 8.2.1",
+                                description="Todos los usuarios deben tener credenciales de autenticación.",
+                            ),
+                            RegulationRef(
+                                framework="OWASP",
+                                article="A07:2021",
+                                description="Identification and Authentication Failures - cuenta sin contraseña.",
+                            ),
+                        ],
+                    )
+                )
+        except Exception:
+            # pg_authid puede no ser accesible con este usuario — omitir check
+            pass
+
+        return findings
+
+    def _check_archive_mode(self, context: ScanContext) -> list[Finding]:
+        """Detecta archive_mode desactivado — sin capacidad de Point-In-Time Recovery."""
+
+        findings: list[Finding] = []
+        settings = {s.name: s.setting for s in context.snapshot.settings}
+
+        archive_mode = settings.get("archive_mode", "on")  # si no está en el snapshot, asumir on
+        if archive_mode.lower() == "off":
+            findings.append(
+                Finding(
+                    id="CFG-009-archive-mode",
+                    module=self.name,
+                    category="backup",
+                    title="archive_mode desactivado — sin Point-In-Time Recovery (PITR)",
+                    description=(
+                        "El parámetro archive_mode está en 'off'. Sin WAL archiving activo, "
+                        "no es posible realizar Point-In-Time Recovery (PITR) ante corrupción "
+                        "de datos o desastre. Solo están disponibles backups base, lo que puede "
+                        "representar pérdida significativa de datos entre backups."
+                    ),
+                    severity=Severity.HIGH,
+                    evidence="SHOW archive_mode;",
+                    recommendation=(
+                        "Activar archive_mode con archive_command apropiado para habilitar PITR. "
+                        "Documentar la estrategia de backup y retención según regulación aplicable."
+                    ),
+                    remediation_sql=(
+                        "-- Requiere reinicio del servidor PostgreSQL:\n"
+                        "ALTER SYSTEM SET archive_mode = 'on';\n"
+                        "ALTER SYSTEM SET archive_command = 'cp %p /ruta/wal_archive/%f';\n"
+                        "-- Luego reiniciar PostgreSQL para aplicar cambios."
+                    ),
+                    regulation_refs=[
+                        RegulationRef(
+                            framework="ISO 27001",
+                            article="A.12.3",
+                            description="Backup de información — continuidad de negocio.",
+                        ),
+                        RegulationRef(
+                            framework="CNBV",
+                            description="Resguardo y recuperación de información financiera.",
+                        ),
+                    ],
+                )
+            )
+
+        return findings
+
+    def _check_pci_table_grants(self, context: ScanContext) -> list[Finding]:
+        """Detecta roles con SELECT sobre tablas de ámbito PCI (tarjetas, pagos)."""
+
+        findings: list[Finding] = []
+
+        # Tablas cuyo nombre sugiere datos de tarjetas de pago (PCI-DSS scope)
+        pci_table_names = frozenset({
+            "cards", "credit_cards", "debit_cards", "card_data",
+            "payments", "card_transactions", "pan_data",
+        })
+
+        # Excluir superusers del reporte (tienen acceso legítimo por naturaleza de su rol)
+        superusers = {r.role_name for r in context.snapshot.roles if r.is_superuser}
+
+        for priv in context.snapshot.privileges:
+            if (
+                priv.object_type == "table"
+                and priv.object_name in pci_table_names
+                and priv.privilege_type == "SELECT"
+                and priv.grantee not in superusers
+                and priv.grantee != "PUBLIC"  # PUBLIC se cubre en CFG-011
+            ):
+                findings.append(
+                    Finding(
+                        id=f"CFG-010-{priv.object_schema}-{priv.object_name}-{priv.grantee}",
+                        module=self.name,
+                        category="privileges",
+                        title=f"Rol '{priv.grantee}' tiene SELECT sobre tabla PCI '{priv.object_name}'",
+                        description=(
+                            f"El rol '{priv.grantee}' tiene privilegio SELECT sobre "
+                            f"'{priv.object_schema}.{priv.object_name}', que contiene o puede contener "
+                            "datos de tarjetas de pago (PANs, CVVs, etc.). Esto viola el principio "
+                            "de mínimo privilegio de PCI-DSS y puede exponer datos de titulares de tarjetas."
+                        ),
+                        severity=Severity.CRITICAL,
+                        evidence=(
+                            "SELECT grantee, privilege_type "
+                            "FROM information_schema.role_table_grants "
+                            f"WHERE table_name = '{priv.object_name}';"
+                        ),
+                        recommendation=(
+                            f"Revocar SELECT de '{priv.grantee}' sobre '{priv.object_name}'. "
+                            "Solo roles del procesamiento de pagos deben tener acceso. "
+                            "Considerar crear vistas enmascaradas (solo últimos 4 dígitos) para reportes."
+                        ),
+                        remediation_sql=(
+                            f"REVOKE SELECT ON "
+                            f"{quote_identifier(priv.object_schema)}.{quote_identifier(priv.object_name)} "
+                            f"FROM {quote_identifier(priv.grantee)};"
+                        ),
+                        regulation_refs=[
+                            RegulationRef(
+                                framework="PCI-DSS",
+                                article="Req. 3",
+                                description="Protect stored cardholder data.",
+                            ),
+                            RegulationRef(
+                                framework="PCI-DSS",
+                                article="Req. 7",
+                                description="Restrict access to system components and cardholder data.",
+                            ),
+                        ],
+                        table_schema=priv.object_schema,
+                        table_name=priv.object_name,
+                    )
+                )
+
+        return findings
+
+    def _check_public_table_grants(self, context: ScanContext) -> list[Finding]:
+        """Detecta tablas con privilegios SELECT otorgados al rol PUBLIC."""
+
+        findings: list[Finding] = []
+
+        for priv in context.snapshot.privileges:
+            if (
+                priv.object_type == "table"
+                and priv.grantee == "PUBLIC"
+                and priv.privilege_type == "SELECT"
+            ):
+                findings.append(
+                    Finding(
+                        id=f"CFG-011-public-{priv.object_schema}-{priv.object_name}",
+                        module=self.name,
+                        category="privileges",
+                        title=f"Tabla '{priv.object_name}' tiene SELECT otorgado a PUBLIC",
+                        description=(
+                            f"La tabla '{priv.object_schema}.{priv.object_name}' tiene SELECT "
+                            "otorgado al rol PUBLIC, lo que significa que TODOS los roles actuales "
+                            "y futuros pueden leer su contenido sin GRANT explícito. Si contiene "
+                            "datos personales o sensibles, esto viola LFPDPPP y otros marcos regulatorios."
+                        ),
+                        severity=Severity.HIGH,
+                        evidence=(
+                            "SELECT grantee, privilege_type "
+                            "FROM information_schema.role_table_grants "
+                            f"WHERE table_name = '{priv.object_name}' AND grantee = 'PUBLIC';"
+                        ),
+                        recommendation=(
+                            f"Revocar SELECT de PUBLIC sobre '{priv.object_name}'. "
+                            "Otorgar acceso solo a los roles específicos que realmente lo necesitan."
+                        ),
+                        remediation_sql=(
+                            f"REVOKE SELECT ON "
+                            f"{quote_identifier(priv.object_schema)}.{quote_identifier(priv.object_name)} "
+                            f"FROM PUBLIC;"
+                        ),
+                        regulation_refs=[
+                            RegulationRef(
+                                framework="LFPDPPP",
+                                description="Principio de información mínima — datos personales.",
+                            ),
+                            RegulationRef(
+                                framework="PCI-DSS",
+                                article="Req. 7",
+                                description="Restrict access by need to know.",
+                            ),
+                        ],
+                        table_schema=priv.object_schema,
+                        table_name=priv.object_name,
+                    )
+                )
 
         return findings
 

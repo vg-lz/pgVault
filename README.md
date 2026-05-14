@@ -116,6 +116,10 @@ en roles, funciones, logging y autenticación.
 | **CFG-005** | Autenticación 'trust' en `pg_hba.conf` desde redes externas | CRITICAL/HIGH |
 | **CFG-006** | Roles con nombres sospechosos asociados a credenciales débiles | HIGH |
 | **CFG-007** | Extensiones peligrosas instaladas (dblink, pg_read_server_files, file_fdw) | MEDIUM |
+| **CFG-008** | Roles con `can_login` pero sin contraseña configurada (`pg_authid.rolpassword IS NULL`) | HIGH |
+| **CFG-009** | `archive_mode = off` — sin Point-In-Time Recovery (PITR) | HIGH |
+| **CFG-010** | Roles con SELECT sobre tablas de ámbito PCI (cards, payments, etc.) | CRITICAL |
+| **CFG-011** | Privilegio SELECT otorgado a PUBLIC sobre tablas con datos sensibles | HIGH |
 
 **Detalles de CFG-005:**
 - CRITICAL: reglas `trust` desde `0.0.0.0/0` o `::/0` (acceso desde cualquier red)
@@ -125,7 +129,14 @@ en roles, funciones, logging y autenticación.
 - Detecta roles con nombres comunes como 'admin', 'administrator', 'root', 'test', 'demo'
 - Recomienda política de contraseñas robustas y renombrado de roles
 
-**Cobertura actual:** 8/10 problemas de configuración detectados (80%)
+**Detalles de CFG-008:**
+- Requiere acceso a `pg_catalog.pg_authid` — se omite silenciosamente si el usuario no tiene permisos
+
+**Detalles de CFG-010:**
+- Tablas supervisadas: `cards`, `credit_cards`, `debit_cards`, `payments`, `card_data`, `pan_data`, `card_transactions`
+- Los superusers se excluyen del reporte (acceso legítimo)
+
+**Cobertura actual:** 10/10 problemas de configuración detectados (100%)
 
 **Uso:**
 
