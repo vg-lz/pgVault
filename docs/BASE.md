@@ -1,163 +1,130 @@
-# Guia base
+# Guia Tecnica
 
-Esta guia resume la base tecnica compartida de PgVault. Sirve como referencia
-global para entender la configuracion, el conector read-only, el snapshot de
-catalogo, los modelos compartidos y la forma en que se conectan los modulos.
-
-## Alcance
-
-La base contiene:
-
-- Configuracion por variables de entorno en `pgvault/config.py`.
-- Cliente PostgreSQL con guardia read-only en `pgvault/db.py`.
-- Preflight de acceso a catalogos y snapshot en `pgvault/snapshot.py`.
-- Modelos compartidos en `pgvault/models.py`.
-- Interfaz de modulos en `pgvault/modules.py`.
-- Orquestador principal en `pgvault/orchestrator.py`.
-- CLI JSON en `pgvault/cli.py`.
-- Dockerfile y Docker Compose para ejecutar el proyecto de forma consistente.
-
-La base no contiene los checks finales de configuracion/privilegios ni el PDF
-profesional, pero si incluye un primer modulo real de PII por nombre y sampling
-seguro para probar el flujo end-to-end sin hardcodear problemas de FintechDB.
+Esta guia documenta la arquitectura interna de PgVault. El README es la puerta
+principal del proyecto; este documento queda como referencia para mantener,
+extender o revisar el codigo.
 
 ## Estructura
 
 ```text
 pgvault/
-  config.py        Configuracion desde entorno.
+  config.py        Configuracion desde entorno o payload web.
   db.py            Conexion asyncpg y guardia read-only.
   models.py        Contratos Pydantic compartidos.
   snapshot.py      Preflight y extraccion del catalogo.
   modules.py       Interfaz para scanners.
   orchestrator.py  Flujo principal del scan.
   cli.py           Entrada por linea de comandos.
-  web.py           API FastAPI que usa el mismo orquestador.
+  web.py           API FastAPI y archivos estaticos.
+
+pgvault/scanners/
+  configuration_scanner.py
 
 modules/
-  pii_scanner/     Scanner PII conectado a ScannerModule.
+  name_scanner.py
+  pii_scanner/
+    scanner.py
+    content_validators.py
+    score_engine.py
+
+Reports/
+  adapters.py
+  generator.py
+  regulations_map.py
+  scoring.py
 
 tests/
   test_base_architecture.py
+  test_configuration_scanner.py
   test_demo_databases.py
 ```
 
-## Uso con Docker Compose
+## Orquestador
 
-La forma principal de ejecutar PgVault es con Docker Compose. El contenedor de
-la aplicacion instala las dependencias del proyecto y se conecta al servicio de
-PostgreSQL definido en `docker-compose.yml`.
+El flujo principal vive en `pgvault.orchestrator.run_scan`:
 
-Levantar PostgreSQL y ejecutar PgVault:
+1. Carga configuracion si no se recibe una explicita.
+2. Crea un `scan_id`.
+3. Abre `DatabaseClient` si no se inyecto uno.
+4. Ejecuta `preflight_catalog_access`.
+5. Extrae un `CatalogSnapshot`.
+6. Construye un `ScanContext`.
+7. Ejecuta cada modulo registrado.
+8. Agrega `Finding`, `ScanWarning` y `ScanError`.
+9. Cierra la conexion si el orquestador la abrio.
+10. Devuelve un `ScanResult`.
 
-```bash
-docker compose up --build
-```
+Si un modulo falla, el scan no se cancela. El error queda registrado en
+`ScanResult.errors` con el nombre del modulo.
 
-El compose principal levanta la web de PgVault y las bases demo `fintechdb`,
-`tiendadb` y `appdb`. El servicio `pgvault` corre Uvicorn; el CLI queda
-disponible dentro del mismo contenedor.
+## Modelos Canonicos
 
-Ejecutar CLI contra la configuracion del contenedor:
+Todos los modulos deben importar modelos desde `pgvault.models`.
 
-```bash
-docker compose run --rm pgvault python -m pgvault scan
-```
+Modelo central de hallazgos:
 
-## Validacion con Docker
+- `Finding`: hallazgo emitido por cualquier scanner.
+- `Severity`: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`.
+- `RegulationRef`: referencia regulatoria.
 
-Validar la configuracion de Compose:
+Modelos de ejecucion:
 
-```bash
-docker compose config
-```
+- `ScanResult`: resultado final del scan.
+- `ScanWarning`: limitacion o problema no fatal.
+- `ScanError`: error de modulo capturado sin detener el scan.
+- `CatalogSnapshot`: metadata extraida del catalogo.
 
-Construir la imagen de PgVault:
+El `CatalogSnapshot` incluye schemas, tablas, columnas, roles, membresias,
+funciones, extensiones, settings, reglas HBA, privilegios y estado RLS cuando
+estan disponibles.
 
-```bash
-docker compose build pgvault
-```
+## Guardia Read-Only
 
-Ejecutar pruebas dentro del contenedor:
+La guardia vive en `pgvault.db.assert_readonly_query`.
 
-```bash
-docker compose run --rm --no-deps pgvault python -m pytest -q
-```
-
-No es necesario instalar Python, pip ni pytest directamente en la maquina
-local para usar o validar el proyecto.
-
-## Variables de entorno
-
-PgVault lee estas variables:
-
-- `PGHOST`
-- `PGPORT`
-- `PGDATABASE`
-- `PGUSER`
-- `PGPASSWORD`
-- `PGSSLMODE`
-- `DATABASE_URL` opcional, con prioridad sobre las variables separadas.
-- `PGVAULT_SAMPLE_LIMIT`
-- `PGVAULT_QUERY_TIMEOUT_SECONDS`
-
-Usar `.env.example` como plantilla para crear un `.env` local.
-
-## Flujo del orquestador
-
-El flujo principal es:
-
-1. Cargar configuracion.
-2. Conectar a PostgreSQL con asyncpg.
-3. Ejecutar preflight de fuentes de catalogo.
-4. Extraer `CatalogSnapshot`.
-5. Ejecutar los modulos registrados.
-6. Unificar findings.
-7. Capturar warnings y errores por modulo.
-8. Devolver `ScanResult`.
-
-Si un modulo falla, el scan continua y el error queda registrado en
-`ScanResult.errors`.
-
-## Contrato de modelos
-
-Los modulos deben importar modelos desde `pgvault.models`.
-
-El modelo central para hallazgos es `Finding`. Es generico para PII,
-configuracion, privilegios y futuros reportes. Incluye:
-
-- Identificacion: `id`, `module`, `category`.
-- Texto para reporte: `title`, `description`, `evidence`, `recommendation`.
-- Riesgo: `severity`, `confidence_score`.
-- Ubicacion opcional: `table_schema`, `table_name`, `column_name`.
-- Cumplimiento: `regulation_refs`.
-- Extensiones futuras: `metadata`.
-
-El snapshot de catalogo se representa con `CatalogSnapshot` e incluye schemas,
-tablas, columnas, roles, membresias, funciones, extensiones, settings, reglas
-HBA, privilegios visibles, metadata RLS y estimaciones de filas cuando estan
-disponibles. No lee datos reales de tablas.
-
-## Guardia read-only
-
-`DatabaseClient` permite consultas que empiezan con:
+Permite:
 
 - `SELECT`
 - `WITH`
 - `SHOW`
 - `EXPLAIN`
 
-Bloquea sentencias peligrosas como `INSERT`, `UPDATE`, `DELETE`, `DROP`,
-`ALTER`, `CREATE`, `TRUNCATE`, `GRANT`, `REVOKE`, `CALL`, `DO` y `COPY`.
-Tambien bloquea multiples sentencias, CTEs que modifican datos y
-`EXPLAIN ANALYZE`.
+Bloquea:
 
-Esta guardia es una defensa de aplicacion. No reemplaza usar un usuario real
-de PostgreSQL con permisos read-only.
+- sentencias de escritura o DDL;
+- multiples sentencias;
+- `EXPLAIN ANALYZE`;
+- `EXPLAIN` sobre operaciones no read-only;
+- CTEs que modifican datos.
 
-## Como conectar un modulo
+La guardia protege contra errores de implementacion, pero la defensa principal
+en produccion debe ser un usuario PostgreSQL con permisos read-only.
 
-Un modulo debe tener atributo `name` y metodo async `run`:
+## Snapshot De Catalogo
+
+`pgvault.snapshot.extract_catalog_snapshot` consulta fuentes estandar de
+PostgreSQL:
+
+- `information_schema.columns`
+- `information_schema.tables`
+- `pg_catalog.pg_roles`
+- `pg_catalog.pg_auth_members`
+- `pg_catalog.pg_class`
+- `pg_catalog.pg_namespace`
+- `pg_catalog.pg_proc`
+- `pg_catalog.pg_settings`
+- `pg_catalog.pg_extension`
+- `pg_catalog.pg_hba_file_rules`
+- `information_schema.table_privileges`
+- `pg_catalog.pg_policy`
+
+Antes del snapshot, `preflight_catalog_access` intenta leer cada fuente. Si una
+vista no esta disponible para el usuario conectado, agrega un `ScanWarning`
+con el impacto esperado.
+
+## Modulos
+
+Un scanner debe exponer `name` y `run(context)`:
 
 ```python
 from pgvault.models import Finding
@@ -171,53 +138,69 @@ class MyScanner:
         return []
 ```
 
-El modulo se registra pasandolo al orquestador:
+Los modulos por defecto se registran en `pgvault.modules.get_default_modules`.
+Actualmente se ejecutan:
 
-```python
-from pgvault.orchestrator import run_scan
+- `modules.pii_scanner.scanner.PiiScanner`
+- `pgvault.scanners.configuration_scanner.ConfigurationScanner`
 
-result = await run_scan(modules=[MyScanner()])
+## PII Scanner
+
+El scanner PII usa:
+
+- `modules/name_scanner.py` para detectar candidatos por nombre de columna.
+- `modules/pii_scanner/content_validators.py` para validar muestras.
+- `modules/pii_scanner/score_engine.py` para calcular score y severidad.
+- `modules/pii_scanner/scanner.py` como integracion con `ScannerModule`.
+
+El sampling se ejecuta solo si `sample_limit > 0` y la relacion es una tabla
+base o particionada. La evidencia se mantiene agregada: no se exponen valores
+crudos de la base.
+
+## Configuration Scanner
+
+`pgvault/scanners/configuration_scanner.py` lee principalmente el snapshot y
+emite hallazgos `CFG-*` para roles, funciones, logging, autenticacion,
+extensiones, passwords, PITR y privilegios.
+
+La unica regla que consulta fuera del snapshot es `CFG-008`, porque necesita
+`pg_catalog.pg_authid`. Si el usuario no tiene acceso, el check se omite de
+forma silenciosa.
+
+## Web
+
+`pgvault.web` expone:
+
+```text
+GET  /
+GET  /app
+GET  /api/health
+POST /api/validate
+POST /api/scans
 ```
 
-Cada modulo recibe `ScanContext`, que contiene `config`, `db`, `snapshot`,
-`scan_id` y `warnings`.
+Los endpoints de perfiles e historial existen para compatibilidad de UI, pero
+la persistencia visible se maneja en el navegador con `localStorage`. La
+contrasena no se persiste.
 
-Los modulos por defecto se declaran en `get_default_modules()`. Actualmente
-incluye `PiiScanner`, por lo que CLI, web y Docker ejecutan el mismo flujo real.
+## Reportes
 
-```mermaid
-flowchart LR
-  C["Config/env/web payload"] --> D["DatabaseClient read-only"]
-  D --> P["Preflight catalog access"]
-  P --> S["CatalogSnapshot"]
-  S --> M["ScannerModule list"]
-  M --> F["Finding[]"]
-  P --> R["ScanResult"]
-  F --> R
-  R --> CLI["CLI JSON"]
-  R --> WEB["/api/scans"]
-  R --> REP["Reports adapters"]
+`Reports.adapters.scan_result_to_report_findings` transforma
+`ScanResult.findings` al formato usado por `Reports.generator`.
+
+`Reports.generator.generate_all` genera:
+
+- reporte ejecutivo;
+- reporte tecnico.
+
+## Validacion
+
+Comandos recomendados:
+
+```bash
+docker compose config
+docker compose build pgvault
+docker compose run --rm --no-deps pgvault python -m pytest -q
 ```
 
-## Modelos del PII scanner existente
-
-El scanner PII existente usa el contrato compartido de `pgvault.models`.
-`modules/pii_scanner/models.py` funciona como archivo de compatibilidad para
-imports anteriores.
-
-El archivo raiz `models.py` tambien funciona como re-export temporal de
-`pgvault.models` para reducir rupturas con imports antiguos.
-
-## Guia por integrante
-
-- Integrante 2 debe crear scanners que lean `context.snapshot.settings`,
-  `roles`, `role_memberships`, `functions`, `extensions`, `privileges`, `rls`,
-  `schemas` y `tables`; solo debe consultar `context.db` si el snapshot no
-  basta.
-- Integrante 3 debe extender `modules/pii_scanner` con mejores validadores y
-  heuristicas de contenido. La evidencia debe seguir siendo agregada: conteos,
-  ratios y metadata, nunca valores crudos.
-- Integrante 4 debe consumir `ScanResult.findings`. Para el codigo legacy de
-  `Reports/`, usar `Reports.adapters.scan_result_to_report_findings`.
-- Integrante 5 puede usar CLI, web y Docker sin rutas especiales: todos llaman
-  `pgvault.orchestrator.run_scan`.
+La validacion no requiere Python local; se ejecuta dentro del contenedor.

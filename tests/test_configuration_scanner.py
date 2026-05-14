@@ -11,6 +11,7 @@ from pgvault.models import (
     SettingMeta,
     HbaRuleMeta,
     ExtensionMeta,
+    Severity,
 )
 from pgvault.modules import ScanContext
 
@@ -171,7 +172,7 @@ async def test_detects_superuser_roles(mock_context_with_issues):
     
     cfg001_findings = [f for f in findings if f.id.startswith("CFG-001")]
     assert len(cfg001_findings) == 1
-    assert cfg001_findings[0].severity == "HIGH"
+    assert cfg001_findings[0].severity == Severity.HIGH
     assert "admin" in cfg001_findings[0].evidence
 
 
@@ -183,7 +184,7 @@ async def test_detects_security_definer_without_search_path(mock_context_with_is
     
     cfg002_findings = [f for f in findings if f.id.startswith("CFG-002")]
     assert len(cfg002_findings) == 1
-    assert cfg002_findings[0].severity == "MEDIUM"
+    assert cfg002_findings[0].severity == Severity.MEDIUM
     assert "unsafe_definer" in cfg002_findings[0].evidence
 
 
@@ -197,10 +198,10 @@ async def test_detects_logging_disabled(mock_context_with_issues):
     cfg004_findings = [f for f in findings if f.id == "CFG-004-log-disconnections"]
     
     assert len(cfg003_findings) == 1
-    assert cfg003_findings[0].severity == "HIGH"
+    assert cfg003_findings[0].severity == Severity.HIGH
     
     assert len(cfg004_findings) == 1
-    assert cfg004_findings[0].severity == "MEDIUM"
+    assert cfg004_findings[0].severity == Severity.MEDIUM
 
 
 @pytest.mark.asyncio
@@ -213,8 +214,8 @@ async def test_detects_trust_authentication(mock_context_with_issues):
     assert len(cfg005_findings) == 2
     
     # Verificar severidad correcta
-    critical_findings = [f for f in cfg005_findings if f.severity == "CRITICAL"]
-    high_findings = [f for f in cfg005_findings if f.severity == "HIGH"]
+    critical_findings = [f for f in cfg005_findings if f.severity == Severity.CRITICAL]
+    high_findings = [f for f in cfg005_findings if f.severity == Severity.HIGH]
     
     assert len(critical_findings) == 1  # 0.0.0.0/0
     assert len(high_findings) == 1  # local
@@ -243,7 +244,7 @@ async def test_all_findings_have_required_fields(mock_context_with_issues):
         assert finding.category
         assert finding.title
         assert finding.description
-        assert finding.severity in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+        assert finding.severity in set(Severity)
         assert finding.evidence
         assert finding.recommendation
         # remediation_sql puede ser None para algunos hallazgos
@@ -258,7 +259,7 @@ async def test_detects_weak_credential_role_names(mock_context_with_issues):
     
     cfg006_findings = [f for f in findings if f.id.startswith("CFG-006")]
     assert len(cfg006_findings) == 1
-    assert cfg006_findings[0].severity == "HIGH"
+    assert cfg006_findings[0].severity == Severity.HIGH
     assert "admin" in cfg006_findings[0].title.lower()
 
 
@@ -270,7 +271,7 @@ async def test_detects_dangerous_extensions(mock_context_with_issues):
     
     cfg007_findings = [f for f in findings if f.id.startswith("CFG-007")]
     assert len(cfg007_findings) == 1
-    assert cfg007_findings[0].severity == "MEDIUM"
+    assert cfg007_findings[0].severity == Severity.MEDIUM
     assert "dblink" in cfg007_findings[0].evidence
 
 
@@ -282,7 +283,7 @@ async def test_detects_role_without_password(mock_context_with_issues):
 
     cfg008_findings = [f for f in findings if f.id.startswith("CFG-008")]
     assert len(cfg008_findings) == 1
-    assert cfg008_findings[0].severity == "HIGH"
+    assert cfg008_findings[0].severity == Severity.HIGH
     assert "app_legacy" in cfg008_findings[0].id
 
 
@@ -304,7 +305,7 @@ async def test_detects_archive_mode_off(mock_context_with_issues):
 
     cfg009_findings = [f for f in findings if f.id == "CFG-009-archive-mode"]
     assert len(cfg009_findings) == 1
-    assert cfg009_findings[0].severity == "HIGH"
+    assert cfg009_findings[0].severity == Severity.HIGH
     assert "archive_mode" in cfg009_findings[0].evidence
 
 
@@ -316,7 +317,7 @@ async def test_detects_pci_table_grants(mock_context_with_issues):
 
     cfg010_findings = [f for f in findings if f.id.startswith("CFG-010")]
     assert len(cfg010_findings) == 1
-    assert cfg010_findings[0].severity == "CRITICAL"
+    assert cfg010_findings[0].severity == Severity.CRITICAL
     assert "reports_user" in cfg010_findings[0].title
     assert "cards" in cfg010_findings[0].title
 
@@ -329,5 +330,5 @@ async def test_detects_public_table_grants(mock_context_with_issues):
 
     cfg011_findings = [f for f in findings if f.id.startswith("CFG-011")]
     assert len(cfg011_findings) == 1
-    assert cfg011_findings[0].severity == "HIGH"
+    assert cfg011_findings[0].severity == Severity.HIGH
     assert "customers" in cfg011_findings[0].title

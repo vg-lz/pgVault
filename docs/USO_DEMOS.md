@@ -51,18 +51,17 @@ de Docker Compose.
 | `tiendadb-demo` | `tiendadb` | `5432` | `tiendadb` | `tienda_user` | `tienda_pass` | `disable` | `100` | `10` |
 | `appdb-demo` | `appdb` | `5432` | `appdb` | `app_user` | `app_pass` | `disable` | `100` | `10` |
 
-## Bases de prueba del profesor
+## Alcance de las bases demo
 
-Las bases de datos de prueba entregadas por el profesor estan integradas como
-servicios de Docker Compose y se conservan sin modificar. PgVault debe
-analizarlas tal como vienen, porque contienen los errores y problemas plantados
-para evaluar la deteccion.
+Las bases demo estan integradas como servicios de Docker Compose y se conservan
+sin modificar. Sirven para demostrar conexion, extraccion de catalogo,
+deteccion de datos sensibles y controles de configuracion.
 
-| Perfil en la web | Base | Objetivo de prueba | Credenciales |
+| Perfil en la web | Base | Objetivo de demostracion | Credenciales |
 |---|---|---|---|
 | `fintechdb-demo` | `fintechdb` | Seguridad, cumplimiento, roles, privilegios y datos sensibles | `fintech_user` / `fintech_pass` |
-| `tiendadb-demo` | `tiendadb` | Salud general, indices, bloat, configuracion y rendimiento | `tienda_user` / `tienda_pass` |
-| `appdb-demo` | `appdb` | Queries problematicas, planes de ejecucion y anti-patterns | `app_user` / `app_pass` |
+| `tiendadb-demo` | `tiendadb` | Inventario, datos sensibles y controles de configuracion disponibles por catalogo | `tienda_user` / `tienda_pass` |
+| `appdb-demo` | `appdb` | Inventario, datos sensibles y controles de configuracion disponibles por catalogo | `app_user` / `app_pass` |
 
 Para probarlas desde la web:
 

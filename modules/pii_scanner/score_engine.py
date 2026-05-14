@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from .models import Severity
+
+from pgvault.models import Severity
 
 W_NAME = 0.35
 W_CONTENT = 0.55

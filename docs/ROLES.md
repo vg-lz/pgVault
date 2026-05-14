@@ -1,32 +1,30 @@
-# Roles
+# Roles Del Equipo
 
-Los roles sirven para repartir responsabilidad, no para aislar el trabajo. Todos deben entender lo básico de todo PgVault.
-
-## Roles por asignar
-
-Cuando el equipo lo decida, copiar cada rol a la persona correspondiente en el README.
+Los roles reparten responsabilidad, pero no aislan el trabajo. Todos los
+integrantes deben poder explicar el flujo principal de PgVault: conexion
+read-only, snapshot, modulos, hallazgos y salida por web/CLI.
 
 | Rol | Integrante asignado |
 |---|---|
-| Conector y orquestador |  |
-| Auditor de configuración |  |
-| Descubridor de datos sensibles |  |
-| Reportes y mapeo regulatorio |  |
-| Producto, negocio y coordinación |  |
+| Conector y orquestador | Diego Vega |
+| Auditor de configuracion | Dowshell Smith |
+| Descubridor de datos sensibles | Daniela Borquez |
+| Reportes y mapeo regulatorio | Mariajose Rito |
+| Producto, negocio y coordinacion | Cesar Mendez |
 
-## Conector y orquestador
+## Conector Y Orquestador
 
 Responsable de:
 
-- Conexión read-only a PostgreSQL.
-- Extracción de catálogo.
-- Orquestación de módulos.
-- Integración de hallazgos con recomendaciones.
+- Conexion read-only a PostgreSQL.
+- Extraccion de catalogo.
+- Orquestacion de modulos.
+- Integracion de hallazgos con recomendaciones.
 - Docker Compose junto con el equipo.
 
-Debe explicar al equipo cómo PgVault se conecta y cómo fluye la auditoría.
+Debe explicar al equipo como PgVault se conecta y como fluye la auditoria.
 
-## Auditor de configuración
+## Auditor De Configuracion
 
 Responsable de:
 
@@ -35,44 +33,47 @@ Responsable de:
 - Funciones `SECURITY DEFINER`.
 - Configuraciones inseguras.
 - Reglas extensibles.
-- Recomendaciones técnicas para corregir cada hallazgo.
+- Recomendaciones tecnicas para corregir cada hallazgo.
 
-Debe explicar al equipo cómo se genera un hallazgo de seguridad y qué recomendación corresponde.
+Debe explicar al equipo como se genera un hallazgo de seguridad y que
+recomendacion corresponde.
 
-## Descubridor de datos sensibles
+## Descubridor De Datos Sensibles
 
 Responsable de:
 
-- Detección por nombre de columna.
-- Detección por contenido con sampling.
-- Patrones de CURP, RFC, email, tarjetas, teléfonos, passwords, tokens.
+- Deteccion por nombre de columna.
+- Deteccion por contenido con sampling.
+- Patrones de CURP, RFC, email, tarjetas, telefonos, passwords, tokens.
 - Score de confianza.
-- Recomendaciones según tipo de dato sensible encontrado.
+- Recomendaciones segun tipo de dato sensible encontrado.
 
-Debe explicar al equipo cómo se detectan datos sensibles sin exponerlos innecesariamente y cómo se recomienda protegerlos.
+Debe explicar al equipo como se detectan datos sensibles sin exponerlos
+innecesariamente y como se recomienda protegerlos.
 
-## Reportes y mapeo regulatorio
+## Reportes Y Mapeo Regulatorio
 
 Responsable de:
 
 - Score de seguridad.
 - Reporte ejecutivo.
-- Reporte técnico.
-- Sección de recomendaciones automáticas.
-- Exportación PDF.
-- Mapeo LFPDPPP, PCI-DSS y regulación relevante.
+- Reporte tecnico.
+- Seccion de recomendaciones automaticas.
+- Exportacion PDF.
+- Mapeo LFPDPPP, PCI-DSS y regulacion relevante.
 
-Debe explicar al equipo cómo los hallazgos se convierten en recomendaciones y reportes.
+Debe explicar al equipo como los hallazgos se convierten en recomendaciones y
+reportes.
 
-## Producto, negocio y coordinación
+## Producto, Negocio Y Coordinacion
 
 Responsable de:
 
 - GitHub Project.
 - Documento de negocio.
-- Análisis competitivo.
+- Analisis competitivo.
 - Pitch.
 - Demo.
-- Coordinación general.
+- Coordinacion general.
 
-Debe entender también la parte técnica para defender el producto en Q&A.
+Debe entender tambien la parte tecnica para defender el producto en Q&A.
