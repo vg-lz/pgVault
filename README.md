@@ -93,6 +93,71 @@ de crear modulos estan documentados en [docs/BASE.md](docs/BASE.md).
 - **12 de mayo:** demo parcial con integracion y al menos 8 hallazgos funcionando.
 - **15 de mayo:** MVP final, Docker Compose, reportes, pitch, video demo y Q&A.
 
+## Módulos de escaneo
+
+PgVault utiliza un sistema modular de escáneres que analizan diferentes aspectos
+de seguridad y cumplimiento en PostgreSQL. Cada módulo implementa el protocolo
+`ScannerModule` y retorna hallazgos con evidencia, recomendaciones y SQL de
+remediación.
+
+### ConfigurationScanner
+
+Audita la configuración de seguridad del servidor PostgreSQL. Detecta problemas
+en roles, funciones, logging y autenticación.
+
+**Reglas implementadas:**
+
+| ID | Descripción | Severidad |
+|---|---|---|
+| **CFG-001** | Roles con privilegio SUPERUSER innecesario (excluyendo 'postgres') | HIGH |
+| **CFG-002** | Funciones SECURITY DEFINER - requiere verificación manual de `search_path` | MEDIUM |
+| **CFG-003** | Logging de conexiones desactivado (`log_connections = off`) | HIGH |
+| **CFG-004** | Logging de desconexiones desactivado (`log_disconnections = off`) | MEDIUM |
+| **CFG-005** | Autenticación 'trust' en `pg_hba.conf` desde redes externas | CRITICAL/HIGH |
+| **CFG-006** | Roles con nombres sospechosos asociados a credenciales débiles | HIGH |
+| **CFG-007** | Extensiones peligrosas instaladas (dblink, pg_read_server_files, file_fdw) | MEDIUM |
+| **CFG-008** | Roles con `can_login` pero sin contraseña configurada (`pg_authid.rolpassword IS NULL`) | HIGH |
+| **CFG-009** | `archive_mode = off` — sin Point-In-Time Recovery (PITR) | HIGH |
+| **CFG-010** | Roles con SELECT sobre tablas de ámbito PCI (cards, payments, etc.) | CRITICAL |
+| **CFG-011** | Privilegio SELECT otorgado a PUBLIC sobre tablas con datos sensibles | HIGH |
+
+**Detalles de CFG-005:**
+- CRITICAL: reglas `trust` desde `0.0.0.0/0` o `::/0` (acceso desde cualquier red)
+- HIGH: reglas `trust` locales (socket Unix, `127.0.0.1/32`, `::1/128`)
+
+**Detalles de CFG-006:**
+- Detecta roles con nombres comunes como 'admin', 'administrator', 'root', 'test', 'demo'
+- Recomienda política de contraseñas robustas y renombrado de roles
+
+**Detalles de CFG-008:**
+- Requiere acceso a `pg_catalog.pg_authid` — se omite silenciosamente si el usuario no tiene permisos
+
+**Detalles de CFG-010:**
+- Tablas supervisadas: `cards`, `credit_cards`, `debit_cards`, `payments`, `card_data`, `pan_data`, `card_transactions`
+- Los superusers se excluyen del reporte (acceso legítimo)
+
+**Cobertura actual:** 10/10 problemas de configuración detectados (100%)
+
+**Uso:**
+
+El `ConfigurationScanner` se carga automáticamente mediante `pgvault.modules.get_default_modules()`
+con fallback opcional si el módulo no está disponible. No requiere configuración
+adicional.
+
+## Tecnologia
+
+El equipo puede elegir las herramientas que considere mejores. Se permite usar
+herramientas open source e IA, siempre que se entienda, se valide y se declare
+su uso.
+
+Condiciones importantes:
+
+- El producto debe respetar read-only.
+- Debe correr con `docker compose up`.
+- No debe depender de hardcodear la base demo.
+- Cada hallazgo importante debe incluir una recomendacion clara.
+- Todos deben poder explicar lo que se entrega.
+
 ## Flujo de trabajo
 
 1. Crear o tomar una Issue del GitHub Project.

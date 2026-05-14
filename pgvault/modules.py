@@ -41,5 +41,9 @@ def get_default_modules() -> list[ScannerModule]:
     """Return scanner modules included in the base PgVault runtime."""
 
     from modules.pii_scanner.scanner import PiiScanner
+    from pgvault.scanners.configuration_scanner import ConfigurationScanner
 
-    return [PiiScanner()]
+    return [
+        PiiScanner(),
+        ConfigurationScanner(),
+    ]
