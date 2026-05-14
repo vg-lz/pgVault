@@ -1,61 +1,66 @@
-# GitHub Projects
+# Control Del Proyecto
 
-Usaremos GitHub Projects como tablero principal del equipo.
+Este documento describe como mantener el trabajo organizado despues de la
+entrega inicial. El README concentra la informacion de uso y arquitectura; este
+archivo se limita a reglas operativas del equipo.
 
-## Nombre del Project
+## Tablero
 
-`PgVault - Control del Proyecto Final`
+Nombre sugerido:
 
-## Columnas
+```text
+PgVault - Control del Proyecto
+```
+
+Columnas recomendadas:
 
 - Todo
 - In Progress
 - In Review
 - Done
 
-## Milestones
-
-- `Corte 1 - Base funcional` - 9 de mayo
-- `Corte 2 - Integración parcial` - 12 de mayo
-- `Entrega final - MVP PgVault` - 15 de mayo
-
 ## Labels
 
-- backend
-- postgres
-- security-checks
-- sensitive-data
-- reports
-- dashboard
-- documentation
-- business
-- demo
-- testing
-- urgent
+- `backend`
+- `postgres`
+- `security-checks`
+- `sensitive-data`
+- `reports`
+- `web`
+- `documentation`
+- `business`
+- `demo`
+- `testing`
+- `urgent`
 
-## Primeras Issues
+## Criterios Para Crear Issues
 
-Crear estas Issues iniciales en el Project:
+Crear una issue cuando el trabajo:
 
-1. `Configurar GitHub Project`
-2. `Definir integrantes, números y roles`
-3. `Definir arquitectura inicial del MVP`
-4. `Levantar base demo PostgreSQL`
-5. `Crear conexión read-only`
-6. `Definir estructura de hallazgos`
-7. `Definir estructura de recomendaciones automáticas`
-8. `Crear primeros checks de seguridad`
-9. `Definir patrones de datos sensibles`
-10. `Crear estructura inicial de reportes`
-11. `Preparar primer avance del 9 de mayo`
+- cambie comportamiento del scanner;
+- agregue o modifique una regla de deteccion;
+- toque modelos compartidos;
+- cambie contratos de API;
+- afecte Docker Compose o las bases demo;
+- agregue documentacion relevante para usuarios o mantenedores;
+- corrija un bug reproducible.
 
-Después de eso, cada integrante crea sus propias Issues según su rol.
+## Flujo Recomendado
 
-## Reglas simples del tablero
+1. Crear o tomar una issue.
+2. Crear una rama corta y descriptiva.
+3. Implementar cambios pequenos y revisables.
+4. Ejecutar validacion local o en Docker.
+5. Abrir pull request con resumen y pruebas.
+6. Solicitar revision cruzada.
+7. Integrar solo cuando la revision este aprobada.
 
-- Toda tarea importante debe tener Issue.
-- Toda Issue debe tener responsable.
-- Si una tarea se bloquea, dejarla en `In Progress` y escribir el bloqueo en la Issue.
-- Si una tarea ya tiene PR, moverla a `In Review`.
-- Si está aprobada e integrada, moverla a `Done`.
-- No dejar tareas grandes sin dividir.
+## Definicion De Done
+
+Una tarea se considera terminada cuando:
+
+- el cambio esta implementado;
+- las pruebas relevantes pasan;
+- no hay imports rotos ni archivos obsoletos referenciados;
+- la documentacion queda alineada con el comportamiento real;
+- el PR explica impacto, validacion y cualquier uso relevante de IA.

@@ -1,12 +1,12 @@
 import pytest
-from modules.pii_scanner.validators.content_validators import (
+from modules.pii_scanner.content_validators import (
     validate_curp, validate_rfc, validate_email,
     validate_card_number, validate_cvv, validate_clabe,
     validate_phone_mx, validate_token, validate_ssn,
     match_ratio,
 )
-from modules.pii_scanner.name_scanner import scan_by_name
-from modules.pii_scanner.models import ColumnMeta
+from modules.name_scanner import scan_by_name
+from pgvault.models import ColumnMeta
 from modules.pii_scanner.score_engine import calculate_score, ScoreInput
 
 
