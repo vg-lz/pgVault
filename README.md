@@ -247,3 +247,6 @@ Integrantes:
 - Mendez Yepez, Cesar Alejandro
 - Rito Michelena, Mariajose
 - Vega Cabrera, Diego
+
+Presentación
+https://canva.link/ftsbtdq6hbuoe0m
